@@ -17,8 +17,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
-    "diagrams>=0.23",
-    "fastmcp>=3.0",
+    "diagrams==0.25.1",
+    "fastmcp==3.2.0",
 ]
 
 [project.scripts]

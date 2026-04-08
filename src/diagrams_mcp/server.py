@@ -1,4 +1,5 @@
 from fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
@@ -19,6 +20,11 @@ mcp = FastMCP(
 mcp.mount(render)
 mcp.mount(discovery)
 mcp.mount(references)
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(request):
+    return JSONResponse({"status": "ok"})
 
 
 def main():

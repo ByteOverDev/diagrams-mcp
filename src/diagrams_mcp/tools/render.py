@@ -11,7 +11,9 @@ render = FastMCP("Render")
 
 
 @render.tool(timeout=30.0)
-def render_diagram(code: str, filename: str = "diagram") -> Image:
+def render_diagram(
+    code: str, filename: str = "diagram", output_path: str | None = None
+) -> Image | str:
     """Render a mingrammer/diagrams Python snippet to PNG and return the image.
 
     The code must be a complete Python script using `from diagrams import ...` imports
@@ -20,6 +22,9 @@ def render_diagram(code: str, filename: str = "diagram") -> Image:
     Args:
         code: Full Python code using the diagrams library.
         filename: Output filename without extension.
+        output_path: Optional directory or file path to save the PNG to.
+                     If a directory, saves as <directory>/<filename>.png.
+                     If omitted, returns the image inline.
     """
     tmpdir = run_code(code, filename=filename)
     try:
@@ -29,6 +34,16 @@ def render_diagram(code: str, filename: str = "diagram") -> Image:
                 "No diagram output produced. Make sure your code uses "
                 "a `with Diagram(...):` block."
             )
-        return Image(data=pngs[0].read_bytes(), format="png")
+        png_data = pngs[0].read_bytes()
+
+        if output_path:
+            dest = Path(output_path).expanduser().resolve()
+            if dest.is_dir():
+                dest = dest / f"{filename}.png"
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(png_data)
+            return f"Diagram saved to {dest}"
+
+        return Image(data=png_data, format="png")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

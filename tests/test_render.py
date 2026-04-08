@@ -17,6 +17,9 @@ with Diagram("Test"):
 """
     result = render_diagram(code=code)
     assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/png"
+    assert len(content.data) > 0
 
 
 def test_render_invalid_code():

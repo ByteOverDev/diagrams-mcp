@@ -29,6 +29,6 @@ def render_diagram(code: str, filename: str = "diagram") -> Image:
                 "No diagram output produced. Make sure your code uses "
                 "a `with Diagram(...):` block."
             )
-        return Image(path=str(pngs[0]))
+        return Image(data=pngs[0].read_bytes(), format="png")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

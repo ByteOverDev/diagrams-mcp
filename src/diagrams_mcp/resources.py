@@ -3,7 +3,10 @@ from fastmcp import FastMCP
 references = FastMCP("References")
 
 
-@references.resource("diagrams://reference/diagram")
+@references.resource(
+    "diagrams://reference/diagram",
+    mime_type="text/markdown",
+)
 def diagram_reference() -> str:
     """Diagram constructor reference — parameters, defaults, and usage."""
     return """\
@@ -47,7 +50,10 @@ with Diagram("Web Service", direction="TB", curvestyle="curved",
 """
 
 
-@references.resource("diagrams://reference/edge")
+@references.resource(
+    "diagrams://reference/edge",
+    mime_type="text/markdown",
+)
 def edge_reference() -> str:
     """Edge constructor reference — parameters, operators, and styling."""
     return """\
@@ -96,7 +102,10 @@ api >> Edge(style="dashed") >> cache
 """
 
 
-@references.resource("diagrams://reference/cluster")
+@references.resource(
+    "diagrams://reference/cluster",
+    mime_type="text/markdown",
+)
 def cluster_reference() -> str:
     """Cluster constructor reference — parameters, nesting, and styling."""
     return """\

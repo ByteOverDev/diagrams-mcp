@@ -4,9 +4,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends graphviz fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd --create-home appuser
+
 WORKDIR /app
-COPY . .
+COPY --chown=appuser:appuser . .
 RUN pip install --no-cache-dir .
+
+USER appuser
 
 ENV FASTMCP_TRANSPORT=http
 ENV FASTMCP_HOST=0.0.0.0

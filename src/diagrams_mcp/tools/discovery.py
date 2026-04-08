@@ -12,6 +12,30 @@ def _build_import_path(provider: str, service: str, node: str) -> str:
     return f"from diagrams.{provider}.{service} import {node}"
 
 
+def _group_node_names(mod: object) -> list[tuple[str, str | None]]:
+    """Group public Node subclasses by class identity and detect aliases.
+
+    Returns a list of (name, canonical_or_none) tuples where canonical_or_none
+    is None for canonical names and the canonical name string for aliases.
+    """
+    from diagrams import Node
+
+    class_to_names: dict[int, list[str]] = {}
+    for name in dir(mod):
+        if name.startswith("_"):
+            continue
+        obj = getattr(mod, name)
+        if isinstance(obj, type) and issubclass(obj, Node):
+            class_to_names.setdefault(id(obj), []).append(name)
+
+    results: list[tuple[str, str | None]] = []
+    for names in class_to_names.values():
+        canonical = max(names, key=len)
+        for name in names:
+            results.append((name, canonical if name != canonical else None))
+    return results
+
+
 def _enumerate_all_nodes() -> list[dict]:
     """Walk all providers/services/nodes and return structured entries with alias detection."""
     import diagrams
@@ -32,29 +56,16 @@ def _enumerate_all_nodes() -> list[dict]:
             except ImportError:
                 continue
 
-            # Group names by class identity to detect aliases
-            class_to_names: dict[int, list[str]] = {}
-            for name in dir(svc_mod):
-                if name.startswith("_"):
-                    continue
-                obj = getattr(svc_mod, name)
-                if isinstance(obj, type):
-                    cls_id = id(obj)
-                    class_to_names.setdefault(cls_id, []).append(name)
-
-            # For each class, the longest name is canonical; shorter names are aliases
-            for cls_id, names in class_to_names.items():
-                canonical = max(names, key=len)
-                for name in names:
-                    entry = {
-                        "node": name,
-                        "provider": prov.name,
-                        "service": svc.name,
-                        "import": _build_import_path(prov.name, svc.name, name),
-                    }
-                    if name != canonical:
-                        entry["alias_of"] = canonical
-                    results.append(entry)
+            for name, alias_of in _group_node_names(svc_mod):
+                entry = {
+                    "node": name,
+                    "provider": prov.name,
+                    "service": svc.name,
+                    "import": _build_import_path(prov.name, svc.name, name),
+                }
+                if alias_of:
+                    entry["alias_of"] = alias_of
+                results.append(entry)
 
     return results
 
@@ -117,27 +128,15 @@ def list_nodes(provider: str, service: str) -> list[dict]:
             f"Use list_services('{provider}') to see available ones."
         )
 
-    # Group names by class identity to detect aliases
-    class_to_names: dict[int, list[str]] = {}
-    for name in dir(mod):
-        if name.startswith("_"):
-            continue
-        obj = getattr(mod, name)
-        if isinstance(obj, type):
-            cls_id = id(obj)
-            class_to_names.setdefault(cls_id, []).append(name)
-
     results = []
-    for cls_id, names in class_to_names.items():
-        canonical = max(names, key=len)
-        for name in sorted(names):
-            entry = {
-                "name": name,
-                "import": _build_import_path(provider, service, name),
-            }
-            if name != canonical:
-                entry["alias_of"] = canonical
-            results.append(entry)
+    for name, alias_of in _group_node_names(mod):
+        entry = {
+            "name": name,
+            "import": _build_import_path(provider, service, name),
+        }
+        if alias_of:
+            entry["alias_of"] = alias_of
+        results.append(entry)
 
     return sorted(results, key=lambda r: r["name"])
 

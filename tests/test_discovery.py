@@ -96,3 +96,8 @@ def test_search_nodes_empty_result():
 def test_search_nodes_empty_query():
     with pytest.raises(ToolError, match="non-empty"):
         search_nodes("")
+
+
+def test_search_nodes_whitespace_only_query():
+    with pytest.raises(ToolError, match="non-empty"):
+        search_nodes("   ")

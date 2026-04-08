@@ -7,8 +7,8 @@ mcp = FastMCP(
     "diagrams",
     instructions=(
         "Generate cloud architecture diagrams using Python's mingrammer/diagrams library. "
-        "Use list_providers, list_services, and list_nodes to discover available components, "
-        "then render_diagram to produce PNG images from diagrams code."
+        "Use search_nodes to find components by keyword (returns import paths), or browse with "
+        "list_providers -> list_services -> list_nodes. Then render_diagram to produce PNG images."
     ),
     mask_error_details=True,
 )

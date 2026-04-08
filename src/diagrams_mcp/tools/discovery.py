@@ -44,17 +44,23 @@ def _enumerate_all_nodes() -> list[dict]:
     for prov in pkgutil.iter_modules(diagrams.__path__):
         if not prov.ispkg or prov.name.startswith("_"):
             continue
+        prov_fqn = f"diagrams.{prov.name}"
         try:
-            prov_mod = importlib.import_module(f"diagrams.{prov.name}")
-        except ImportError:
-            continue
+            prov_mod = importlib.import_module(prov_fqn)
+        except ModuleNotFoundError as exc:
+            if exc.name == prov_fqn:
+                continue
+            raise
         for svc in pkgutil.iter_modules(prov_mod.__path__):
             if svc.name.startswith("_"):
                 continue
+            svc_fqn = f"diagrams.{prov.name}.{svc.name}"
             try:
-                svc_mod = importlib.import_module(f"diagrams.{prov.name}.{svc.name}")
-            except ImportError:
-                continue
+                svc_mod = importlib.import_module(svc_fqn)
+            except ModuleNotFoundError as exc:
+                if exc.name == svc_fqn:
+                    continue
+                raise
 
             for name, alias_of in _group_node_names(svc_mod):
                 entry = {
@@ -157,7 +163,7 @@ def search_nodes(query: str) -> list[dict]:
 
     q = query.strip().lower()
     index = _get_node_index()
-    matches = [entry for entry in index if q in entry["node"].lower()]
+    matches = [entry.copy() for entry in index if q in entry["node"].lower()]
 
     if not matches:
         return []

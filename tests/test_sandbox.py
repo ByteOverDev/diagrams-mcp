@@ -45,7 +45,9 @@ def test_run_code_minimal_env():
             assert "SECRET_KEY" not in env
         finally:
             import shutil
+
             shutil.rmtree(tmpdir2, ignore_errors=True)
     finally:
         import shutil
+
         shutil.rmtree(tmpdir, ignore_errors=True)

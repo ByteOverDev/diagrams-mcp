@@ -73,8 +73,7 @@ def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> 
     except subprocess.TimeoutExpired as exc:
         shutil.rmtree(tmpdir, ignore_errors=True)
         raise ToolError(
-            f"Diagram rendering timed out after {timeout:.0f}s. "
-            "Try simplifying the diagram."
+            f"Diagram rendering timed out after {timeout:.0f}s. Try simplifying the diagram."
         ) from exc
 
     if result.returncode != 0:

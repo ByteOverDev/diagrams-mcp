@@ -29,6 +29,27 @@ def test_run_code_timeout():
         run_code("import time; time.sleep(60)", timeout=1)
 
 
+def test_run_code_rejects_invalid_filename():
+    """run_code rejects filenames with unsafe characters."""
+    with pytest.raises(ToolError, match="Invalid filename"):
+        run_code("print('hello')", filename='"; import os #')
+
+    with pytest.raises(ToolError, match="Invalid filename"):
+        run_code("print('hello')", filename="../etc/passwd")
+
+    with pytest.raises(ToolError, match="Invalid filename"):
+        run_code("print('hello')", filename="")
+
+
+def test_run_code_accepts_valid_filenames():
+    """run_code accepts reasonable filenames."""
+    import shutil
+
+    for name in ["diagram", "my-diagram", "Web_Service_2024", "test.output"]:
+        tmpdir = run_code("print('ok')", filename=name)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_run_code_minimal_env():
     """run_code subprocess inherits only minimal environment variables."""
     import json

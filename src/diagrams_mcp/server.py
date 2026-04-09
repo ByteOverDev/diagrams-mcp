@@ -1,3 +1,5 @@
+import re
+
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse, Response
 
@@ -44,8 +46,6 @@ async def serve_image(request):
 
 def _sanitize_filename(name: str) -> str:
     """Sanitize a filename for use in Content-Disposition headers."""
-    import re
-
     name = re.sub(r'["\\/\r\n\x00-\x1f]', "", name)
     name = name[:100]
     return name or "image"

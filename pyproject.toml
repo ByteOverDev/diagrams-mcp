@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "diagrams-mcp"
 version = "0.1.0"
-description = "MCP server for rendering cloud architecture diagrams using mingrammer/diagrams"
+description = "MCP server for rendering diagrams using mingrammer/diagrams, Mermaid, and PlantUML"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "Mykola Skrypets" }]
-keywords = ["mcp", "diagrams", "architecture", "graphviz"]
+keywords = ["mcp", "diagrams", "architecture", "graphviz", "mermaid", "plantuml"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",

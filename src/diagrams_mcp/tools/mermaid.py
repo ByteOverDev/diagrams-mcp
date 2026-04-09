@@ -17,7 +17,6 @@ _PUPPETEER_CONFIG = os.environ.get("MERMAID_PUPPETEER_CONFIG", "/etc/mermaid/pup
 def render_mermaid(
     definition: str,
     filename: str = "diagram",
-    output_path: str | None = None,
     download_link: bool = False,
 ) -> Image | str:
     """Render a Mermaid diagram definition to PNG and return the image.
@@ -28,17 +27,13 @@ def render_mermaid(
     Args:
         definition: Mermaid diagram definition text.
         filename: Output filename without extension.
-        output_path: Optional directory or file path to save the PNG to.
-                     If a directory, saves as <directory>/<filename>.png.
-                     If omitted, returns the image inline.
         download_link: If True, store the image on the server and return a
                        temporary download URL path (/images/{token}) instead of
                        the inline image. The link expires after 15 minutes.
-                       Ignored when output_path is set.
     """
     cmd = ["mmdc", "-i", "-", "-o", "-", "-e", "png"]
     if os.path.isfile(_PUPPETEER_CONFIG):
         cmd.extend(["-p", _PUPPETEER_CONFIG])
 
     png_data = run_cli(cmd, input_data=definition.encode())
-    return deliver_image(png_data, filename, output_path, download_link)
+    return deliver_image(png_data, filename, download_link)

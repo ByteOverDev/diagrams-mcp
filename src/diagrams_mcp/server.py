@@ -34,11 +34,21 @@ async def serve_image(request):
     entry = image_store.get(token)
     if entry is None:
         return JSONResponse({"error": "not found or expired"}, status_code=404)
+    safe_name = _sanitize_filename(entry.filename)
     return Response(
         content=entry.data,
         media_type="image/png",
-        headers={"Content-Disposition": f'attachment; filename="{entry.filename}.png"'},
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}.png"'},
     )
+
+
+def _sanitize_filename(name: str) -> str:
+    """Sanitize a filename for use in Content-Disposition headers."""
+    import re
+
+    name = re.sub(r'["\\/\r\n\x00-\x1f]', "", name)
+    name = name[:100]
+    return name or "image"
 
 
 def main():

@@ -1,6 +1,7 @@
 """In-memory store for temporary diagram images with TTL-based expiry."""
 
 import secrets
+import threading
 import time
 from dataclasses import dataclass
 
@@ -26,6 +27,7 @@ class ImageStore:
 
     def __init__(self) -> None:
         self._entries: dict[str, ImageEntry] = {}
+        self._lock = threading.Lock()
 
     def store(self, data: bytes, filename: str, ttl: float = DEFAULT_TTL) -> str:
         """Store image data and return an unguessable URL-safe token.
@@ -38,13 +40,14 @@ class ImageStore:
         Returns:
             A URL-safe token string (43 characters, 256 bits of entropy).
         """
-        self._sweep()
         token = secrets.token_urlsafe(32)
-        self._entries[token] = ImageEntry(
-            data=data,
-            filename=filename,
-            expires_at=time.time() + ttl,
-        )
+        with self._lock:
+            self._sweep()
+            self._entries[token] = ImageEntry(
+                data=data,
+                filename=filename,
+                expires_at=time.time() + ttl,
+            )
         return token
 
     def get(self, token: str) -> ImageEntry | None:
@@ -52,16 +55,17 @@ class ImageStore:
 
         Expired entries are deleted on access (lazy cleanup).
         """
-        entry = self._entries.get(token)
-        if entry is None:
-            return None
-        if entry.expires_at < time.time():
-            del self._entries[token]
-            return None
-        return entry
+        with self._lock:
+            entry = self._entries.get(token)
+            if entry is None:
+                return None
+            if entry.expires_at < time.time():
+                del self._entries[token]
+                return None
+            return entry
 
     def _sweep(self) -> None:
-        """Remove all expired entries from the store."""
+        """Remove all expired entries from the store. Caller must hold _lock."""
         now = time.time()
         expired = [k for k, v in self._entries.items() if v.expires_at < now]
         for k in expired:

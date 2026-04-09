@@ -3,7 +3,7 @@ import tempfile
 import pytest
 from fastmcp.exceptions import ToolError
 
-from diagrams_mcp.sandbox import run_code
+from diagrams_mcp.sandbox import run_cli, run_code
 
 
 def test_run_code_simple_script():
@@ -75,3 +75,37 @@ def test_run_code_minimal_env():
         import shutil
 
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_cli_returns_stdout():
+    """run_cli captures and returns stdout bytes."""
+    result = run_cli(["echo", "-n", "hello"])
+    assert result == b"hello"
+
+
+def test_run_cli_passes_stdin():
+    """run_cli pipes input_data to the process's stdin."""
+    result = run_cli(["cat"], input_data=b"from stdin")
+    assert result == b"from stdin"
+
+
+def test_run_cli_timeout():
+    """run_cli raises ToolError when the subprocess exceeds the timeout."""
+    with pytest.raises(ToolError, match="timed out"):
+        run_cli(["sleep", "60"], timeout=1)
+
+
+def test_run_cli_nonzero_exit():
+    """run_cli raises ToolError on non-zero exit code."""
+    with pytest.raises(ToolError, match="Rendering failed"):
+        run_cli(["false"])
+
+
+def test_run_cli_minimal_env():
+    """run_cli subprocess inherits only minimal environment variables."""
+    result = run_cli(["env"])
+    env_lines = result.decode().strip().split("\n")
+    env_dict = dict(line.split("=", 1) for line in env_lines if "=" in line)
+    assert "PATH" in env_dict
+    assert "HOME" in env_dict
+    assert "SECRET_KEY" not in env_dict

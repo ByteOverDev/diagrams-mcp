@@ -1,6 +1,7 @@
 """Sandboxed execution of diagram rendering code."""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -9,6 +10,8 @@ import textwrap
 from pathlib import Path
 
 from fastmcp.exceptions import ToolError
+
+_SAFE_FILENAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9 _\-\.]{0,99}$")
 
 _WRAPPER = textwrap.dedent("""\
     import os
@@ -50,6 +53,12 @@ def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> 
     Raises:
         ToolError: On syntax errors, runtime errors, or timeout.
     """
+    if not _SAFE_FILENAME.fullmatch(filename):
+        raise ToolError(
+            f"Invalid filename: {filename!r}. "
+            "Use only letters, digits, spaces, hyphens, underscores, or dots."
+        )
+
     tmpdir = tempfile.mkdtemp(prefix="diagrams_mcp_")
     script = _WRAPPER.format(tmpdir=tmpdir, filename=filename) + code
     script_path = Path(tmpdir) / "_render.py"
@@ -59,6 +68,7 @@ def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> 
         "PATH": os.environ.get("PATH", ""),
         "HOME": tmpdir,
         "TMPDIR": tmpdir,
+        "LANG": "C.UTF-8",
     }
 
     try:

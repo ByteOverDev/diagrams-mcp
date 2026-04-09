@@ -1,3 +1,4 @@
+import functools
 import importlib
 import pkgutil
 
@@ -12,12 +13,8 @@ def _build_import_path(provider: str, service: str, node: str) -> str:
     return f"from diagrams.{provider}.{service} import {node}"
 
 
-def _group_node_names(mod: object) -> list[tuple[str, str | None]]:
-    """Group public Node subclasses by class identity and detect aliases.
-
-    Returns a list of (name, canonical_or_none) tuples where canonical_or_none
-    is None for canonical names and the canonical name string for aliases.
-    """
+def _collect_node_classes(mod: object) -> dict[int, list[str]]:
+    """Map class identity to public Node subclass names found in a module."""
     from diagrams import Node
 
     class_to_names: dict[int, list[str]] = {}
@@ -27,12 +24,58 @@ def _group_node_names(mod: object) -> list[tuple[str, str | None]]:
         obj = getattr(mod, name)
         if isinstance(obj, type) and issubclass(obj, Node):
             class_to_names.setdefault(id(obj), []).append(name)
+    return class_to_names
 
+
+def _resolve_aliases(class_to_names: dict[int, list[str]]) -> list[tuple[str, str | None]]:
+    """Resolve canonical vs alias names from grouped class identities."""
     results: list[tuple[str, str | None]] = []
     for names in class_to_names.values():
         canonical = max(names, key=len)
         for name in names:
-            results.append((name, canonical if name != canonical else None))
+            alias_of = canonical if name != canonical else None
+            results.append((name, alias_of))
+    return results
+
+
+def _group_node_names(mod: object) -> list[tuple[str, str | None]]:
+    """Group public Node subclasses by class identity and detect aliases.
+
+    Returns a list of (name, canonical_or_none) tuples where canonical_or_none
+    is None for canonical names and the canonical name string for aliases.
+    """
+    return _resolve_aliases(_collect_node_classes(mod))
+
+
+def _try_import(fqn: str) -> object | None:
+    """Try to import a module by fully-qualified name, returning None if it doesn't exist."""
+    try:
+        return importlib.import_module(fqn)
+    except ModuleNotFoundError as exc:
+        if exc.name == fqn:
+            return None
+        raise
+
+
+def _enumerate_provider_nodes(prov_name: str, prov_mod: object) -> list[dict]:
+    """Walk all services/nodes for a single provider and return structured entries."""
+    results = []
+    for svc in pkgutil.iter_modules(prov_mod.__path__):
+        if svc.name.startswith("_"):
+            continue
+        svc_mod = _try_import(f"diagrams.{prov_name}.{svc.name}")
+        if svc_mod is None:
+            continue
+        for name, alias_of in _group_node_names(svc_mod):
+            entry = {
+                "node": name,
+                "provider": prov_name,
+                "service": svc.name,
+                "import": _build_import_path(prov_name, svc.name, name),
+            }
+            if alias_of:
+                entry["alias_of"] = alias_of
+            results.append(entry)
     return results
 
 
@@ -44,47 +87,17 @@ def _enumerate_all_nodes() -> list[dict]:
     for prov in pkgutil.iter_modules(diagrams.__path__):
         if not prov.ispkg or prov.name.startswith("_"):
             continue
-        prov_fqn = f"diagrams.{prov.name}"
-        try:
-            prov_mod = importlib.import_module(prov_fqn)
-        except ModuleNotFoundError as exc:
-            if exc.name == prov_fqn:
-                continue
-            raise
-        for svc in pkgutil.iter_modules(prov_mod.__path__):
-            if svc.name.startswith("_"):
-                continue
-            svc_fqn = f"diagrams.{prov.name}.{svc.name}"
-            try:
-                svc_mod = importlib.import_module(svc_fqn)
-            except ModuleNotFoundError as exc:
-                if exc.name == svc_fqn:
-                    continue
-                raise
-
-            for name, alias_of in _group_node_names(svc_mod):
-                entry = {
-                    "node": name,
-                    "provider": prov.name,
-                    "service": svc.name,
-                    "import": _build_import_path(prov.name, svc.name, name),
-                }
-                if alias_of:
-                    entry["alias_of"] = alias_of
-                results.append(entry)
-
+        prov_mod = _try_import(f"diagrams.{prov.name}")
+        if prov_mod is None:
+            continue
+        results.extend(_enumerate_provider_nodes(prov.name, prov_mod))
     return results
 
 
-_node_index: list[dict] | None = None
-
-
+@functools.cache
 def _get_node_index() -> list[dict]:
     """Lazy-initialize and return the cached node index."""
-    global _node_index
-    if _node_index is None:
-        _node_index = _enumerate_all_nodes()
-    return _node_index
+    return _enumerate_all_nodes()
 
 
 @discovery.tool

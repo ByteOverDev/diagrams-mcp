@@ -79,7 +79,7 @@ def test_run_code_minimal_env():
 
 def test_run_cli_returns_stdout():
     """run_cli captures and returns stdout bytes."""
-    result = run_cli(["echo", "-n", "hello"])
+    result = run_cli(["printf", "%s", "hello"])
     assert result == b"hello"
 
 
@@ -99,6 +99,12 @@ def test_run_cli_nonzero_exit():
     """run_cli raises ToolError on non-zero exit code."""
     with pytest.raises(ToolError, match="Rendering failed"):
         run_cli(["false"])
+
+
+def test_run_cli_empty_stdout():
+    """run_cli raises ToolError when subprocess produces no output."""
+    with pytest.raises(ToolError, match="no output"):
+        run_cli(["true"])
 
 
 def test_run_cli_minimal_env():

@@ -4,6 +4,9 @@ import secrets
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
+
+from fastmcp.utilities.types import Image
 
 
 @dataclass(slots=True)
@@ -73,3 +76,28 @@ class ImageStore:
 
 
 image_store = ImageStore()
+
+
+def deliver_image(
+    png_data: bytes,
+    filename: str,
+    output_path: str | None,
+    download_link: bool,
+) -> Image | str:
+    """Return rendered PNG data as an inline Image, download link, or saved file.
+
+    Shared by render_diagram, render_mermaid, and render_plantuml.
+    """
+    if output_path:
+        dest = Path(output_path).expanduser().resolve()
+        if dest.is_dir():
+            dest = dest / f"{filename}.png"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(png_data)
+        return f"Diagram saved to {dest}"
+
+    if download_link:
+        token = image_store.store(png_data, filename)
+        return f"/images/{token}"
+
+    return Image(data=png_data, format="png")

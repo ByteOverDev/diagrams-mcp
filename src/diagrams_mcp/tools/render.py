@@ -5,7 +5,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import Image
 
-from diagrams_mcp.image_store import image_store
+from diagrams_mcp.image_store import deliver_image
 from diagrams_mcp.sandbox import run_code
 
 render = FastMCP("Render")
@@ -42,19 +42,6 @@ def render_diagram(
                 "No diagram output produced. Make sure your code uses a `with Diagram(...):` block."
             )
         png_data = pngs[0].read_bytes()
-
-        if output_path:
-            dest = Path(output_path).expanduser().resolve()
-            if dest.is_dir():
-                dest = dest / f"{filename}.png"
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(png_data)
-            return f"Diagram saved to {dest}"
-
-        if download_link:
-            token = image_store.store(png_data, filename)
-            return f"/images/{token}"
-
-        return Image(data=png_data, format="png")
+        return deliver_image(png_data, filename, output_path, download_link)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

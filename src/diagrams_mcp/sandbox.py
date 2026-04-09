@@ -148,4 +148,7 @@ def run_cli(
             stderr = "..." + stderr[-_MAX_STDERR_LEN:]
         raise ToolError(f"Rendering failed:\n{stderr}")
 
+    if not result.stdout:
+        raise ToolError("Rendering produced no output. Check the diagram definition.")
+
     return result.stdout

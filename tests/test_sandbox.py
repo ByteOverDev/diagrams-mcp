@@ -47,7 +47,10 @@ def test_run_code_accepts_valid_filenames():
 
     for name in ["diagram", "my-diagram", "Web_Service_2024", "test.output"]:
         tmpdir = run_code("print('ok')", filename=name)
-        shutil.rmtree(tmpdir, ignore_errors=True)
+        try:
+            assert tmpdir.is_dir()
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_run_code_minimal_env():

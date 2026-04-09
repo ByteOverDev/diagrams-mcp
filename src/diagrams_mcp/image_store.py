@@ -5,6 +5,8 @@ import threading
 import time
 from dataclasses import dataclass
 
+from fastmcp.utilities.types import Image
+
 
 @dataclass(slots=True)
 class ImageEntry:
@@ -73,3 +75,19 @@ class ImageStore:
 
 
 image_store = ImageStore()
+
+
+def deliver_image(
+    png_data: bytes,
+    filename: str,
+    download_link: bool,
+) -> Image | str:
+    """Return rendered PNG data as an inline Image or a temporary download link.
+
+    Shared by render_diagram, render_mermaid, and render_plantuml.
+    """
+    if download_link:
+        token = image_store.store(png_data, filename)
+        return f"/images/{token}"
+
+    return Image(data=png_data, format="png")

@@ -163,3 +163,209 @@ with Cluster("Styled", graph_attr={
 from diagrams import Cluster, Group  # Group == Cluster
 ```
 """
+
+
+@references.resource(
+    "diagrams://reference/mermaid",
+    mime_type="text/markdown",
+)
+def mermaid_reference() -> str:
+    """Mermaid diagram syntax reference — common diagram types and examples."""
+    return """\
+# Mermaid Syntax Reference
+
+Render Mermaid diagrams with `render_mermaid(definition)`.
+
+## Flowchart
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
+```
+
+## Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant A as Alice
+    participant B as Bob
+    A->>B: Hello Bob
+    B-->>A: Hi Alice
+    A->>B: How are you?
+    B-->>A: Great!
+```
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    Animal <|-- Duck
+    Animal <|-- Fish
+    Animal : +int age
+    Animal : +String gender
+    Animal : +isMammal()
+    Duck : +String beakColor
+    Duck : +swim()
+    Duck : +quack()
+```
+
+## ER Diagram
+
+```mermaid
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    PRODUCT ||--o{ LINE-ITEM : "ordered in"
+```
+
+## State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Still
+    Still --> [*]
+    Still --> Moving
+    Moving --> Still
+    Moving --> Crash
+    Crash --> [*]
+```
+
+## Gantt Chart
+
+```mermaid
+gantt
+    title Project Schedule
+    dateFormat YYYY-MM-DD
+    section Phase 1
+    Task A :a1, 2024-01-01, 30d
+    Task B :after a1, 20d
+```
+
+## Key Syntax Notes
+
+- **Node shapes**: `[rect]`, `(round)`, `{diamond}`, `([stadium])`, `[[subroutine]]`,
+  `[(cylinder)]`, `((circle))`
+- **Arrow types**: `-->` solid, `-.->` dotted, `==>` thick, `--text-->` labeled
+- **Subgraphs**: `subgraph title ... end` for grouping
+- **Direction**: `graph TD` (top-down), `graph LR` (left-right), `graph BT`, `graph RL`
+"""
+
+
+@references.resource(
+    "diagrams://reference/plantuml",
+    mime_type="text/markdown",
+)
+def plantuml_reference() -> str:
+    """PlantUML diagram syntax reference — common diagram types and examples."""
+    return """\
+# PlantUML Syntax Reference
+
+Render PlantUML diagrams with `render_plantuml(definition)`.
+All definitions must be wrapped in `@startuml` / `@enduml`.
+
+## Sequence Diagram
+
+```plantuml
+@startuml
+Alice -> Bob: Authentication Request
+Bob --> Alice: Authentication Response
+Alice -> Bob: Another request
+Bob --> Alice: Another response
+@enduml
+```
+
+## Class Diagram
+
+```plantuml
+@startuml
+class User {
+  +String name
+  +String email
+  +login()
+}
+class Order {
+  +int id
+  +Date date
+  +ship()
+}
+User "1" -- "*" Order : places
+@enduml
+```
+
+## Component Diagram
+
+```plantuml
+@startuml
+package "Frontend" {
+  [Web App]
+  [Mobile App]
+}
+package "Backend" {
+  [API Server]
+  [Auth Service]
+}
+database "Database" {
+  [PostgreSQL]
+}
+[Web App] --> [API Server]
+[Mobile App] --> [API Server]
+[API Server] --> [Auth Service]
+[API Server] --> [PostgreSQL]
+@enduml
+```
+
+## Activity Diagram
+
+```plantuml
+@startuml
+start
+:Receive request;
+if (Valid?) then (yes)
+  :Process request;
+  :Send response;
+else (no)
+  :Return error;
+endif
+stop
+@enduml
+```
+
+## State Diagram
+
+```plantuml
+@startuml
+[*] --> Idle
+Idle --> Processing : submit
+Processing --> Done : complete
+Processing --> Error : fail
+Error --> Idle : retry
+Done --> [*]
+@enduml
+```
+
+## Deployment Diagram
+
+```plantuml
+@startuml
+node "Web Server" {
+  [Nginx]
+  [App]
+}
+node "DB Server" {
+  [PostgreSQL]
+}
+[Nginx] --> [App]
+[App] --> [PostgreSQL]
+@enduml
+```
+
+## Key Syntax Notes
+
+- **Arrows**: `->` solid, `-->` dashed, `..>` dotted, `->>` async, `->o` with circle
+- **Stereotypes**: `<<interface>>`, `<<abstract>>`, `<<enum>>`
+- **Notes**: `note left of X : text`, `note right of X : text`, `note over X : text`
+- **Colors**: `#Red`, `#FF0000`, `skinparam backgroundColor #EEEEEE`
+- **Grouping**: `package`, `node`, `folder`, `frame`, `cloud`, `database`
+"""

@@ -94,3 +94,65 @@ def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> 
         raise ToolError(f"Diagram code failed:\n{stderr}")
 
     return Path(tmpdir)
+
+
+def run_cli(
+    cmd: list[str],
+    *,
+    input_data: bytes | None = None,
+    timeout: float = 25.0,
+) -> bytes:
+    """Run an external CLI tool in a sandboxed subprocess, returning stdout bytes.
+
+    Args:
+        cmd: Command and arguments to execute (e.g. ["mmdc", "-i", "-", "-o", "-"]).
+        input_data: Optional bytes piped to the process's stdin.
+        timeout: Maximum execution time in seconds.
+
+    Returns:
+        Raw bytes captured from the process's stdout.
+
+    Raises:
+        ToolError: On non-zero exit, timeout, or empty stdout.
+    """
+    tmpdir = tempfile.mkdtemp(prefix="diagrams_mcp_cli_")
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": tmpdir,
+        "TMPDIR": tmpdir,
+        "LANG": "C.UTF-8",
+    }
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=tmpdir,
+            input=input_data,
+            capture_output=True,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ToolError(
+            f"Rendering timed out after {timeout:.0f}s. Try simplifying the diagram."
+        ) from exc
+    except (FileNotFoundError, OSError) as exc:
+        raise ToolError(
+            f"Failed to execute renderer {cmd[0]!r}: {exc}"
+        ) from exc
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    if result.returncode != 0:
+        stderr = result.stderr
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+        stderr = stderr.strip()
+        if len(stderr) > _MAX_STDERR_LEN:
+            stderr = "..." + stderr[-_MAX_STDERR_LEN:]
+        raise ToolError(f"Rendering failed:\n{stderr}")
+
+    if not result.stdout:
+        raise ToolError("Rendering produced no output. Check the diagram definition.")
+
+    return result.stdout

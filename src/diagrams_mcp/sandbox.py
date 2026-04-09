@@ -136,6 +136,10 @@ def run_cli(
         raise ToolError(
             f"Rendering timed out after {timeout:.0f}s. Try simplifying the diagram."
         ) from exc
+    except (FileNotFoundError, OSError) as exc:
+        raise ToolError(
+            f"Failed to execute renderer {cmd[0]!r}: {exc}"
+        ) from exc
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

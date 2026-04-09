@@ -1,5 +1,6 @@
 """In-memory store for temporary diagram images with TTL-based expiry."""
 
+import os
 import secrets
 import threading
 import time
@@ -89,9 +90,18 @@ def deliver_image(
     Shared by render_diagram, render_mermaid, and render_plantuml.
     """
     if output_path:
-        dest = Path(output_path).expanduser().resolve()
-        if dest.is_dir():
-            dest = dest / f"{filename}.png"
+        base_dir = Path(output_path).expanduser().resolve()
+        if base_dir.is_dir():
+            safe_name = Path(filename).name
+            if not safe_name or safe_name.startswith("."):
+                safe_name = "diagram"
+            dest = (base_dir / f"{safe_name}.png").resolve()
+            if not str(dest).startswith(str(base_dir) + os.sep) and dest.parent != base_dir:
+                raise ValueError(
+                    f"Invalid filename {filename!r}: resolves outside the output directory."
+                )
+        else:
+            dest = base_dir
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(png_data)
         return f"Diagram saved to {dest}"

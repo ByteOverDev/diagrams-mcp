@@ -6,16 +6,21 @@ from starlette.responses import JSONResponse, Response
 from diagrams_mcp.image_store import image_store
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
+from diagrams_mcp.tools.mermaid import mermaid
 from diagrams_mcp.tools.render import render
 
 mcp = FastMCP(
     "diagrams",
     instructions=(
-        "Generate cloud architecture diagrams using Python's mingrammer/diagrams library. "
+        "Generate diagrams using multiple rendering engines.\n\n"
+        "**mingrammer/diagrams** (cloud architecture): "
         "Use search_nodes to find components by keyword (returns import paths), or browse with "
         "list_providers -> list_services -> list_nodes. Read the diagrams://reference/diagram, "
         "diagrams://reference/edge, and diagrams://reference/cluster resources for constructor "
-        "options and usage examples. Then render_diagram to produce PNG images."
+        "options and usage examples. Then render_diagram to produce PNG images.\n\n"
+        "**Mermaid** (flowcharts, sequence, class, ER, state, Gantt): "
+        "Read diagrams://reference/mermaid for syntax. "
+        "Then render_mermaid with a definition string."
     ),
     mask_error_details=True,
 )
@@ -23,6 +28,7 @@ mcp = FastMCP(
 mcp.mount(render)
 mcp.mount(discovery)
 mcp.mount(references)
+mcp.mount(mermaid)
 
 
 @mcp.custom_route("/health", methods=["GET"])

@@ -7,6 +7,7 @@ from diagrams_mcp.image_store import image_store
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
 from diagrams_mcp.tools.mermaid import mermaid
+from diagrams_mcp.tools.plantuml import plantuml
 from diagrams_mcp.tools.render import render
 
 mcp = FastMCP(
@@ -20,7 +21,10 @@ mcp = FastMCP(
         "options and usage examples. Then render_diagram to produce PNG images.\n\n"
         "**Mermaid** (flowcharts, sequence, class, ER, state, Gantt): "
         "Read diagrams://reference/mermaid for syntax. "
-        "Then render_mermaid with a definition string."
+        "Then render_mermaid with a definition string.\n\n"
+        "**PlantUML** (sequence, class, component, activity, state, deployment): "
+        "Read diagrams://reference/plantuml for syntax. "
+        "Then render_plantuml with a definition string."
     ),
     mask_error_details=True,
 )
@@ -29,6 +33,7 @@ mcp.mount(render)
 mcp.mount(discovery)
 mcp.mount(references)
 mcp.mount(mermaid)
+mcp.mount(plantuml)
 
 
 @mcp.custom_route("/health", methods=["GET"])

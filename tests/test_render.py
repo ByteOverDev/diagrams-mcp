@@ -32,3 +32,33 @@ def test_render_no_diagram_output():
     """render_diagram raises ToolError when code produces no PNG."""
     with pytest.raises(ToolError, match="No diagram output produced"):
         render_diagram(code="print('hello')")
+
+
+def test_render_with_download_link():
+    """render_diagram with download_link=True returns a /images/ path."""
+    code = """\
+from diagrams import Diagram
+from diagrams.aws.compute import EC2
+
+with Diagram("Test"):
+    EC2("web")
+"""
+    result = render_diagram(code=code, download_link=True)
+    assert isinstance(result, str)
+    assert result.startswith("/images/")
+    # Token should be 43 chars (secrets.token_urlsafe(32))
+    token = result.split("/images/")[1]
+    assert len(token) == 43
+
+
+def test_render_default_returns_image():
+    """render_diagram without download_link still returns an Image."""
+    code = """\
+from diagrams import Diagram
+from diagrams.aws.compute import EC2
+
+with Diagram("Test"):
+    EC2("web")
+"""
+    result = render_diagram(code=code)
+    assert isinstance(result, Image)

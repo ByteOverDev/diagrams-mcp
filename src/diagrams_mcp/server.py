@@ -1,6 +1,7 @@
 from fastmcp import FastMCP
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
+from diagrams_mcp.image_store import image_store
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
 from diagrams_mcp.tools.render import render
@@ -25,6 +26,29 @@ mcp.mount(references)
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):
     return JSONResponse({"status": "ok"})
+
+
+@mcp.custom_route("/images/{token}", methods=["GET"])
+async def serve_image(request):
+    token = request.path_params["token"]
+    entry = image_store.get(token)
+    if entry is None:
+        return JSONResponse({"error": "not found or expired"}, status_code=404)
+    safe_name = _sanitize_filename(entry.filename)
+    return Response(
+        content=entry.data,
+        media_type="image/png",
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}.png"'},
+    )
+
+
+def _sanitize_filename(name: str) -> str:
+    """Sanitize a filename for use in Content-Disposition headers."""
+    import re
+
+    name = re.sub(r'["\\/\r\n\x00-\x1f]', "", name)
+    name = name[:100]
+    return name or "image"
 
 
 def main():

@@ -20,8 +20,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "diagrams>=0.23",
-    "fastmcp>=3.0",
+    "diagrams>=0.23,<1.0",
+    "fastmcp==3.2.3",
 ]
 
 [project.scripts]

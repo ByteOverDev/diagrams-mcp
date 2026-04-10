@@ -4,7 +4,7 @@
 
 MCP server for generating cloud architecture diagrams, flowcharts, sequence diagrams, and more — powered by three rendering engines: [mingrammer/diagrams](https://github.com/mingrammer/diagrams), [Mermaid](https://mermaid.js.org/), and [PlantUML](https://plantuml.com/).
 
-![Example diagram](assets/hero-diagram.png)
+![Example diagram](https://raw.githubusercontent.com/ByteOverDev/diagrams-mcp/main/assets/hero-diagram.png)
 
 ## Getting Started
 
@@ -146,6 +146,8 @@ with Diagram("ECS Service", direction="LR"):
 
 > "Create a flowchart showing a CI/CD pipeline"
 
+![Mermaid flowchart](https://raw.githubusercontent.com/ByteOverDev/diagrams-mcp/main/assets/mermaid-example.png)
+
 ```mermaid
 graph LR
     A[Push to main] --> B[Run Tests]
@@ -160,7 +162,7 @@ graph LR
 
 > "Show the authentication flow between a client, API gateway, and auth service"
 
-![PlantUML sequence diagram](assets/plantuml-example.png)
+![PlantUML sequence diagram](https://raw.githubusercontent.com/ByteOverDev/diagrams-mcp/main/assets/plantuml-example.png)
 
 ```plantuml
 @startuml

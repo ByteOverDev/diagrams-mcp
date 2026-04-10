@@ -98,7 +98,7 @@ def deliver_image(
             raise ValueError(
                 f"deliver_image does not support download_link=True with fmt={fmt!r}. "
                 "ImageEntry and image_store.store do not persist format/MIME metadata, "
-                "so the /images/{{token}} route would serve the image as image/png. "
+                "so the /images/{token} route would serve the image as image/png. "
                 "Use an inline Image(data, format=fmt) instead, or extend ImageStore "
                 "to include format."
             )

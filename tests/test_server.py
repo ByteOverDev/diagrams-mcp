@@ -1,3 +1,5 @@
+import asyncio
+
 from starlette.testclient import TestClient
 
 from diagrams_mcp.image_store import image_store
@@ -40,3 +42,11 @@ def test_serve_image_expired_returns_404():
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 404
+
+
+def test_equivalence_tools_registered():
+    """find_equivalent and list_categories tools are mounted on the root server."""
+    tools = asyncio.get_event_loop().run_until_complete(mcp.list_tools())
+    names = {t.name for t in tools}
+    assert "find_equivalent" in names
+    assert "list_categories" in names

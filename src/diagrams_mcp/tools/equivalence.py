@@ -204,9 +204,7 @@ CATEGORIES: dict[str, dict] = {
                 }
             ],
             "gcp": [{"node": "Iam", "service": "security"}],
-            "azure": [
-                {"node": "AzureADIdentityProtection", "service": "security"}
-            ],
+            "azure": [{"node": "AzureADIdentityProtection", "service": "security"}],
         },
     },
     "kms": {
@@ -236,9 +234,7 @@ CATEGORIES: dict[str, dict] = {
     "notification_service": {
         "description": "Push notification / fan-out messaging service",
         "providers": {
-            "aws": [
-                {"node": "SimpleNotificationServiceSns", "service": "integration"}
-            ],
+            "aws": [{"node": "SimpleNotificationServiceSns", "service": "integration"}],
             "gcp": [{"node": "PubSub", "service": "analytics"}],
             "azure": [{"node": "EventGridDomains", "service": "integration"}],
         },
@@ -305,9 +301,7 @@ def _resolve_aliases(provider: str, service: str, node_name: str) -> list[str]:
     ]
 
 
-def _index_pair(
-    index: dict[str, list[tuple[str, str]]], key: str, pair: tuple[str, str]
-) -> None:
+def _index_pair(index: dict[str, list[tuple[str, str]]], key: str, pair: tuple[str, str]) -> None:
     """Add *pair* to *index* under *key* if not already present."""
     bucket = index.setdefault(key, [])
     if pair not in bucket:
@@ -351,15 +345,11 @@ _REVERSE_INDEX: dict[str, list[tuple[str, str]]] = _build_reverse_index()
 
 # Collect valid provider names from CATEGORIES for validation.
 _KNOWN_PROVIDERS: set[str] = {
-    provider
-    for cat_data in CATEGORIES.values()
-    for provider in cat_data["providers"]
+    provider for cat_data in CATEGORIES.values() for provider in cat_data["providers"]
 }
 
 
-def _resolve_source_entry(
-    cat_data: dict, source_provider: str, node_lower: str
-) -> dict | None:
+def _resolve_source_entry(cat_data: dict, source_provider: str, node_lower: str) -> dict | None:
     """Find the CATEGORIES entry matching *node_lower* (canonical or alias)."""
     for entry in cat_data["providers"][source_provider]:
         if entry["node"].lower() == node_lower:
@@ -367,9 +357,7 @@ def _resolve_source_entry(
                 "node": entry["node"],
                 "provider": source_provider,
                 "service": entry["service"],
-                "import": _build_import_path(
-                    source_provider, entry["service"], entry["node"]
-                ),
+                "import": _build_import_path(source_provider, entry["service"], entry["node"]),
             }
         aliases = _resolve_aliases(source_provider, entry["service"], entry["node"])
         if node_lower in [a.lower() for a in aliases]:
@@ -377,9 +365,7 @@ def _resolve_source_entry(
                 "node": entry["node"],
                 "provider": source_provider,
                 "service": entry["service"],
-                "import": _build_import_path(
-                    source_provider, entry["service"], entry["node"]
-                ),
+                "import": _build_import_path(source_provider, entry["service"], entry["node"]),
             }
     return None
 
@@ -407,9 +393,7 @@ def _collect_equivalents(
                     "node": entry["node"],
                     "provider": provider,
                     "service": entry["service"],
-                    "import": _build_import_path(
-                        provider, entry["service"], entry["node"]
-                    ),
+                    "import": _build_import_path(provider, entry["service"], entry["node"]),
                 }
             )
     return equivalents

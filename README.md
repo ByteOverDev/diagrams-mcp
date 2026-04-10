@@ -1,4 +1,6 @@
-# diagrams-mcp
+# diagrams-mcp-server
+
+[![PyPI](https://img.shields.io/pypi/v/diagrams-mcp-server)](https://pypi.org/project/diagrams-mcp-server/)
 
 MCP server for generating cloud architecture diagrams, flowcharts, sequence diagrams, and more — powered by three rendering engines: [mingrammer/diagrams](https://github.com/mingrammer/diagrams), [Mermaid](https://mermaid.js.org/), and [PlantUML](https://plantuml.com/).
 
@@ -40,13 +42,17 @@ Graphviz is required for the core diagram rendering engine. Mermaid CLI and Plan
 
 #### Install the server
 
-**Via uvx** (recommended, once published to PyPI):
+**Via uvx** (recommended):
 
 ```bash
-uvx diagrams-mcp
+uvx diagrams-mcp-server
 ```
 
-> `uvx` install is not yet available — PyPI publication is tracked in [BYT-122]. In the meantime, install from source:
+**Via pip:**
+
+```bash
+pip install diagrams-mcp-server
+```
 
 **From source:**
 
@@ -63,7 +69,7 @@ After installing, add to your MCP client configuration:
   "mcpServers": {
     "diagrams-mcp": {
       "command": "uvx",
-      "args": ["diagrams-mcp"]
+      "args": ["diagrams-mcp-server"]
     }
   }
 }
@@ -75,7 +81,7 @@ Or if installed via pip:
 {
   "mcpServers": {
     "diagrams-mcp": {
-      "command": "diagrams-mcp"
+      "command": "diagrams-mcp-server"
     }
   }
 }
@@ -175,7 +181,7 @@ Client -> "API Gateway": GET /data (Bearer token)
 # Clone and install
 git clone https://github.com/ByteOverDev/diagrams-mcp.git
 cd diagrams-mcp
-pip install -e .
+pip install -e ".[dev]"
 
 # Run tests
 pytest
@@ -185,7 +191,7 @@ ruff check .
 ruff format .
 
 # Run the MCP server locally (stdio mode)
-diagrams-mcp
+diagrams-mcp-server
 ```
 
 ## Supported Providers

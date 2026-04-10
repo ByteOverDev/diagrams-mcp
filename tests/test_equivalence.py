@@ -37,12 +37,16 @@ def test_find_equivalent_no_target_returns_all():
     assert "azure" in providers
 
 
-def test_find_equivalent_shared_name_resolves_correctly():
-    """APIGateway exists in both aws and gcp — source should be one, not both."""
-    result = find_equivalent("APIGateway")
-    source_provider = result["source"]["provider"]
-    # Source provider must not appear in equivalents.
-    assert not any(e["provider"] == source_provider for e in result["equivalents"])
+def test_find_equivalent_ambiguous_multi_provider():
+    """APIGateway exists in both aws and gcp — should raise, not silently pick one."""
+    with pytest.raises(ToolError, match="Ambiguous.*APIGateway.*providers"):
+        find_equivalent("APIGateway")
+
+
+def test_find_equivalent_ambiguous_multi_category():
+    """PubSub appears in message_queue and notification_service — should raise."""
+    with pytest.raises(ToolError, match="Ambiguous.*PubSub.*categories"):
+        find_equivalent("PubSub")
 
 
 def test_find_equivalent_case_insensitive():

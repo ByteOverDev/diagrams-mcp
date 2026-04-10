@@ -305,35 +305,39 @@ def _resolve_aliases(provider: str, service: str, node_name: str) -> list[str]:
     ]
 
 
-def _build_reverse_index() -> dict[str, list[str]]:
-    """Build a case-insensitive node name → list of category names lookup.
+def _build_reverse_index() -> dict[str, list[tuple[str, str]]]:
+    """Build a case-insensitive node name → ``[(category, provider), ...]`` lookup.
 
     Indexes both the canonical node names listed in ``CATEGORIES`` and any
     package-level aliases discovered via class identity in the ``diagrams``
     package (e.g. ``EKS`` → ``ElasticKubernetesService``).
 
-    Returns a dict mapping lowercased node names to a list of category names
-    that contain that node.  Most nodes appear in exactly one category, but
-    some (e.g. CosmosDb shared between nosql_database and wide_column_database)
-    may map to multiple categories.
+    Each entry in the returned list is a ``(category_name, provider)`` tuple so
+    that callers can detect and report ambiguous lookups (e.g. ``APIGateway``
+    exists in both *aws* and *gcp* within the same category, while ``PubSub``
+    appears in two different categories).
     """
-    index: dict[str, list[str]] = {}
+    index: dict[str, list[tuple[str, str]]] = {}
     for cat_name, cat_data in CATEGORIES.items():
         for provider, entries in cat_data["providers"].items():
             for entry in entries:
+                pair = (cat_name, provider)
                 key = entry["node"].lower()
-                index.setdefault(key, []).append(cat_name)
+                index.setdefault(key, [])
+                if pair not in index[key]:
+                    index[key].append(pair)
                 # Also index package-level aliases for this node.
-                for alias in _resolve_aliases(provider, entry["service"], entry["node"]):
+                for alias in _resolve_aliases(
+                    provider, entry["service"], entry["node"]
+                ):
                     alias_key = alias.lower()
-                    if alias_key not in index:
-                        index[alias_key] = []
-                    if cat_name not in index[alias_key]:
-                        index[alias_key].append(cat_name)
+                    index.setdefault(alias_key, [])
+                    if pair not in index[alias_key]:
+                        index[alias_key].append(pair)
     return index
 
 
-_REVERSE_INDEX: dict[str, list[str]] = _build_reverse_index()
+_REVERSE_INDEX: dict[str, list[tuple[str, str]]] = _build_reverse_index()
 
 # Collect valid provider names from CATEGORIES for validation.
 _KNOWN_PROVIDERS: set[str] = {
@@ -375,49 +379,69 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
         )
 
     node_lower = node.strip().lower()
-    category_names = _REVERSE_INDEX.get(node_lower)
-    if not category_names:
+    matches = _REVERSE_INDEX.get(node_lower)
+    if not matches:
         raise ToolError(
             f"No equivalence mapping found for node {node!r}. "
             "Use list_categories() to see all mapped nodes."
         )
 
-    # Use the first category match (nodes in multiple categories are rare).
-    cat_name = category_names[0]
+    # Detect ambiguity — multiple distinct categories or multiple providers
+    # within the same category — and fail fast so the caller can disambiguate.
+    unique_categories = sorted({cat for cat, _prov in matches})
+    if len(unique_categories) > 1:
+        cat_list = ", ".join(unique_categories)
+        raise ToolError(
+            f"Ambiguous node {node!r}: exists in multiple categories "
+            f"({cat_list}). Use list_categories() to pick the right one "
+            f"and look up a provider-specific node instead."
+        )
+
+    cat_name = unique_categories[0]
     cat_data = CATEGORIES[cat_name]
 
-    # Identify which provider/service this node belongs to.
+    providers_for_node = sorted({prov for _cat, prov in matches})
+    if len(providers_for_node) > 1:
+        prov_list = ", ".join(providers_for_node)
+        raise ToolError(
+            f"Ambiguous node {node!r}: exists in providers {prov_list} "
+            f"within category {cat_name!r}. Use a provider-specific node "
+            f"name instead (see list_categories())."
+        )
+
+    # Unambiguous — exactly one (category, provider) pair.
+    source_provider = providers_for_node[0]
+
+    # Identify the source entry in CATEGORIES for this provider.
     # The lookup may have matched via a package-level alias (e.g. "EKS" →
     # "ElasticKubernetesService"), so we check both the canonical CATEGORIES
     # names and the runtime aliases from the diagrams package.
     source_entry: dict | None = None
-    source_provider: str | None = None
-    for provider, entries in cat_data["providers"].items():
-        for entry in entries:
-            canonical_lower = entry["node"].lower()
-            if canonical_lower == node_lower:
-                # Direct match on canonical name.
-                source_provider = provider
-                source_entry = {
-                    "node": entry["node"],
-                    "provider": provider,
-                    "service": entry["service"],
-                    "import": _build_import_path(provider, entry["service"], entry["node"]),
-                }
-                break
-            # Check if the queried name is a package alias of this canonical node.
-            aliases = _resolve_aliases(provider, entry["service"], entry["node"])
-            aliases_lower = [a.lower() for a in aliases]
-            if node_lower in aliases_lower:
-                source_provider = provider
-                source_entry = {
-                    "node": entry["node"],
-                    "provider": provider,
-                    "service": entry["service"],
-                    "import": _build_import_path(provider, entry["service"], entry["node"]),
-                }
-                break
-        if source_entry is not None:
+    for entry in cat_data["providers"][source_provider]:
+        canonical_lower = entry["node"].lower()
+        if canonical_lower == node_lower:
+            source_entry = {
+                "node": entry["node"],
+                "provider": source_provider,
+                "service": entry["service"],
+                "import": _build_import_path(
+                    source_provider, entry["service"], entry["node"]
+                ),
+            }
+            break
+        # Check if the queried name is a package alias of this canonical node.
+        aliases = _resolve_aliases(
+            source_provider, entry["service"], entry["node"]
+        )
+        if node_lower in [a.lower() for a in aliases]:
+            source_entry = {
+                "node": entry["node"],
+                "provider": source_provider,
+                "service": entry["service"],
+                "import": _build_import_path(
+                    source_provider, entry["service"], entry["node"]
+                ),
+            }
             break
 
     # Collect equivalents (all nodes except the source node itself).

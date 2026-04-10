@@ -426,7 +426,11 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
         if target_provider is not None and provider != target_provider:
             continue
         for entry in entries:
-            if provider == source_provider and entry["node"].lower() == node_lower:
+            is_source = (
+                provider == source_provider
+                and entry["node"].lower() == source_entry["node"].lower()
+            )
+            if is_source:
                 continue
             equivalents.append(
                 {

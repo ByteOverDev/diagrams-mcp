@@ -24,6 +24,8 @@ def test_find_equivalent_alias_lookup():
     result = find_equivalent("EKS")
     assert result["category"] == "container_orchestration"
     assert result["source"]["provider"] == "aws"
+    # Source must not leak into equivalents when queried via alias.
+    assert not any(e["provider"] == "aws" for e in result["equivalents"])
 
 
 def test_find_equivalent_no_target_returns_all():
@@ -33,6 +35,14 @@ def test_find_equivalent_no_target_returns_all():
     # EC2 is aws — equivalents should include gcp and azure
     assert "gcp" in providers
     assert "azure" in providers
+
+
+def test_find_equivalent_shared_name_resolves_correctly():
+    """APIGateway exists in both aws and gcp — source should be one, not both."""
+    result = find_equivalent("APIGateway")
+    source_provider = result["source"]["provider"]
+    # Source provider must not appear in equivalents.
+    assert not any(e["provider"] == source_provider for e in result["equivalents"])
 
 
 def test_find_equivalent_case_insensitive():

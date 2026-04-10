@@ -16,7 +16,10 @@ def test_find_equivalent_ec2_to_gcp():
     assert result["description"] == "Virtual machine / compute instance"
     assert result["source"]["node"] == "EC2"
     assert result["source"]["provider"] == "aws"
-    assert any(e["node"] == "ComputeEngine" for e in result["equivalents"])
+    assert any(
+        e["node"] == "ComputeEngine" and e["provider"] == "gcp"
+        for e in result["equivalents"]
+    )
 
 
 def test_find_equivalent_alias_lookup():
@@ -54,6 +57,12 @@ def test_find_equivalent_case_insensitive():
     lower = find_equivalent("ec2", target_provider="gcp")
     upper = find_equivalent("EC2", target_provider="gcp")
     assert lower["category"] == upper["category"]
+    assert lower["source"]["node"] == "EC2"
+    assert lower["source"]["provider"] == "aws"
+    assert any(
+        e["node"] == "ComputeEngine" and e["provider"] == "gcp"
+        for e in lower["equivalents"]
+    )
 
 
 def test_find_equivalent_return_schema():
@@ -110,9 +119,9 @@ def test_list_categories_structure():
 
 
 def test_list_categories_coverage():
-    """At least 25 categories are returned (currently 30)."""
+    """list_categories returns exactly one entry per CATEGORIES key."""
     result = list_categories()
-    assert len(result) >= 25
+    assert len(result) == len(CATEGORIES)
 
 
 def test_list_categories_includes_known_categories():

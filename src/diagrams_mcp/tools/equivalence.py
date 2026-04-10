@@ -305,6 +305,28 @@ def _resolve_aliases(provider: str, service: str, node_name: str) -> list[str]:
     ]
 
 
+def _index_pair(
+    index: dict[str, list[tuple[str, str]]], key: str, pair: tuple[str, str]
+) -> None:
+    """Add *pair* to *index* under *key* if not already present."""
+    bucket = index.setdefault(key, [])
+    if pair not in bucket:
+        bucket.append(pair)
+
+
+def _index_entry(
+    index: dict[str, list[tuple[str, str]]],
+    cat_name: str,
+    provider: str,
+    entry: dict,
+) -> None:
+    """Index a single CATEGORIES entry (canonical name + aliases)."""
+    pair = (cat_name, provider)
+    _index_pair(index, entry["node"].lower(), pair)
+    for alias in _resolve_aliases(provider, entry["service"], entry["node"]):
+        _index_pair(index, alias.lower(), pair)
+
+
 def _build_reverse_index() -> dict[str, list[tuple[str, str]]]:
     """Build a case-insensitive node name → ``[(category, provider), ...]`` lookup.
 
@@ -321,19 +343,7 @@ def _build_reverse_index() -> dict[str, list[tuple[str, str]]]:
     for cat_name, cat_data in CATEGORIES.items():
         for provider, entries in cat_data["providers"].items():
             for entry in entries:
-                pair = (cat_name, provider)
-                key = entry["node"].lower()
-                index.setdefault(key, [])
-                if pair not in index[key]:
-                    index[key].append(pair)
-                # Also index package-level aliases for this node.
-                for alias in _resolve_aliases(
-                    provider, entry["service"], entry["node"]
-                ):
-                    alias_key = alias.lower()
-                    index.setdefault(alias_key, [])
-                    if pair not in index[alias_key]:
-                        index[alias_key].append(pair)
+                _index_entry(index, cat_name, provider, entry)
     return index
 
 
@@ -345,6 +355,64 @@ _KNOWN_PROVIDERS: set[str] = {
     for cat_data in CATEGORIES.values()
     for provider in cat_data["providers"]
 }
+
+
+def _resolve_source_entry(
+    cat_data: dict, source_provider: str, node_lower: str
+) -> dict | None:
+    """Find the CATEGORIES entry matching *node_lower* (canonical or alias)."""
+    for entry in cat_data["providers"][source_provider]:
+        if entry["node"].lower() == node_lower:
+            return {
+                "node": entry["node"],
+                "provider": source_provider,
+                "service": entry["service"],
+                "import": _build_import_path(
+                    source_provider, entry["service"], entry["node"]
+                ),
+            }
+        aliases = _resolve_aliases(source_provider, entry["service"], entry["node"])
+        if node_lower in [a.lower() for a in aliases]:
+            return {
+                "node": entry["node"],
+                "provider": source_provider,
+                "service": entry["service"],
+                "import": _build_import_path(
+                    source_provider, entry["service"], entry["node"]
+                ),
+            }
+    return None
+
+
+def _collect_equivalents(
+    cat_data: dict,
+    source_provider: str,
+    source_entry: dict,
+    target_provider: str | None,
+) -> list[dict]:
+    """Gather equivalent nodes from all providers except the source."""
+    equivalents: list[dict] = []
+    for provider, entries in cat_data["providers"].items():
+        if target_provider is not None and provider != target_provider:
+            continue
+        for entry in entries:
+            is_source = (
+                provider == source_provider
+                and entry["node"].lower() == source_entry["node"].lower()
+            )
+            if is_source:
+                continue
+            equivalents.append(
+                {
+                    "node": entry["node"],
+                    "provider": provider,
+                    "service": entry["service"],
+                    "import": _build_import_path(
+                        provider, entry["service"], entry["node"]
+                    ),
+                }
+            )
+    return equivalents
 
 
 @equivalence.tool
@@ -372,11 +440,13 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     if not node or not node.strip():
         raise ToolError("node must be a non-empty string.")
 
-    if target_provider is not None and target_provider not in _KNOWN_PROVIDERS:
-        raise ToolError(
-            f"Unknown provider: {target_provider!r}. "
-            f"Valid providers: {sorted(_KNOWN_PROVIDERS)}."
-        )
+    if target_provider is not None:
+        target_provider = target_provider.strip().lower()
+        if target_provider not in _KNOWN_PROVIDERS:
+            raise ToolError(
+                f"Unknown provider: {target_provider!r}. "
+                f"Valid providers: {sorted(_KNOWN_PROVIDERS)}."
+            )
 
     node_lower = node.strip().lower()
     matches = _REVERSE_INDEX.get(node_lower)
@@ -411,61 +481,8 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
 
     # Unambiguous — exactly one (category, provider) pair.
     source_provider = providers_for_node[0]
-
-    # Identify the source entry in CATEGORIES for this provider.
-    # The lookup may have matched via a package-level alias (e.g. "EKS" →
-    # "ElasticKubernetesService"), so we check both the canonical CATEGORIES
-    # names and the runtime aliases from the diagrams package.
-    source_entry: dict | None = None
-    for entry in cat_data["providers"][source_provider]:
-        canonical_lower = entry["node"].lower()
-        if canonical_lower == node_lower:
-            source_entry = {
-                "node": entry["node"],
-                "provider": source_provider,
-                "service": entry["service"],
-                "import": _build_import_path(
-                    source_provider, entry["service"], entry["node"]
-                ),
-            }
-            break
-        # Check if the queried name is a package alias of this canonical node.
-        aliases = _resolve_aliases(
-            source_provider, entry["service"], entry["node"]
-        )
-        if node_lower in [a.lower() for a in aliases]:
-            source_entry = {
-                "node": entry["node"],
-                "provider": source_provider,
-                "service": entry["service"],
-                "import": _build_import_path(
-                    source_provider, entry["service"], entry["node"]
-                ),
-            }
-            break
-
-    # Collect equivalents (all nodes except the source node itself).
-    equivalents: list[dict] = []
-    for provider, entries in cat_data["providers"].items():
-        if target_provider is not None and provider != target_provider:
-            continue
-        for entry in entries:
-            is_source = (
-                provider == source_provider
-                and entry["node"].lower() == source_entry["node"].lower()
-            )
-            if is_source:
-                continue
-            equivalents.append(
-                {
-                    "node": entry["node"],
-                    "provider": provider,
-                    "service": entry["service"],
-                    "import": _build_import_path(
-                        provider, entry["service"], entry["node"]
-                    ),
-                }
-            )
+    source_entry = _resolve_source_entry(cat_data, source_provider, node_lower)
+    equivalents = _collect_equivalents(cat_data, source_provider, source_entry, target_provider)
 
     return {
         "category": cat_name,

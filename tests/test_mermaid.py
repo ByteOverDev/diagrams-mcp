@@ -122,3 +122,96 @@ def test_detect_type_unknown():
 def test_detect_type_leading_whitespace():
     """_detect_type handles leading whitespace before the keyword."""
     assert _detect_type("  \n  erDiagram\n    A ||--o{ B : has") == "erDiagram"
+
+
+def test_detect_type_ignores_keyword_on_later_line():
+    """_detect_type only checks the first non-empty line, not later lines."""
+    # "gantt" appears on a later line as a node name, but the diagram is a graph
+    assert _detect_type("graph TD\n    A --> gantt --> B") == "graph"
+
+
+def test_detect_type_no_substring_match():
+    """_detect_type uses word boundaries and does not match keyword substrings."""
+    # "sequenceDiagramNode" starts with "sequenceDiagram" but is not a type keyword
+    assert _detect_type("sequenceDiagramNode\n    A --> B") == "unknown"
+
+
+def test_detect_type_c4context():
+    """_detect_type identifies C4Context diagrams."""
+    assert _detect_type("C4Context\n    Person(user, 'User')") == "C4Context"
+
+
+def test_detect_type_c4container():
+    """_detect_type identifies C4Container diagrams."""
+    assert _detect_type("C4Container\n    System(s, 'System')") == "C4Container"
+
+
+def test_detect_type_c4component():
+    """_detect_type identifies C4Component diagrams."""
+    assert _detect_type("C4Component\n    Component(c, 'Comp')") == "C4Component"
+
+
+def test_detect_type_c4dynamic():
+    """_detect_type identifies C4Dynamic diagrams."""
+    assert _detect_type("C4Dynamic\n    Rel(a, b, 'calls')") == "C4Dynamic"
+
+
+def test_detect_type_c4deployment():
+    """_detect_type identifies C4Deployment diagrams."""
+    assert _detect_type("C4Deployment\n    Node(n, 'Server')") == "C4Deployment"
+
+
+def test_detect_type_requirement_diagram():
+    """_detect_type identifies requirementDiagram diagrams."""
+    assert _detect_type("requirementDiagram\n    requirement r1 { id: 1 }") == "requirementDiagram"
+
+
+def test_detect_type_zenuml():
+    """_detect_type identifies zenuml diagrams (case-insensitive)."""
+    assert _detect_type("zenuml\n    Alice->Bob: hi") == "zenuml"
+    assert _detect_type("ZenUML\n    Alice->Bob: hi") == "zenuml"
+
+
+def test_detect_type_ishikawa_beta():
+    """_detect_type identifies ishikawa-beta diagrams."""
+    assert _detect_type("ishikawa-beta\n    Problem") == "ishikawa"
+
+
+def test_detect_type_radar_beta():
+    """_detect_type identifies radar-beta diagrams."""
+    assert _detect_type("radar-beta\n    axis A, B, C") == "radar"
+
+
+def test_detect_type_wardley_beta():
+    """_detect_type identifies wardley-beta diagrams."""
+    assert _detect_type("wardley-beta\n    title My Map") == "wardley"
+
+
+def test_detect_type_venn_beta():
+    """_detect_type identifies venn-beta diagrams."""
+    assert _detect_type("venn-beta\n    set A") == "venn"
+
+
+def test_detect_type_statediagram_v2():
+    """_detect_type identifies stateDiagram-v2 variant."""
+    assert _detect_type("stateDiagram-v2\n    [*] --> Active") == "stateDiagram"
+
+
+def test_detect_type_sankey_beta():
+    """_detect_type identifies sankey-beta variant."""
+    assert _detect_type("sankey-beta\n    A,B,10") == "sankey"
+
+
+def test_detect_type_xychart_beta():
+    """_detect_type identifies xychart-beta variant."""
+    assert _detect_type('xychart-beta\n    x-axis "A"') == "xychart"
+
+
+def test_detect_type_block_beta():
+    """_detect_type identifies block-beta variant."""
+    assert _detect_type("block-beta\n    columns 3") == "block"
+
+
+def test_detect_type_packet_beta():
+    """_detect_type identifies packet-beta variant."""
+    assert _detect_type("packet-beta\n    0-15: Header") == "packet"

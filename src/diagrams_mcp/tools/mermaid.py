@@ -17,32 +17,49 @@ mermaid = FastMCP("Mermaid")
 _PUPPETEER_CONFIG = os.environ.get("MERMAID_PUPPETEER_CONFIG", "/etc/mermaid/puppeteer-config.json")
 
 _DIAGRAM_TYPES = {
-    "flowchart": re.compile(r"^\s*flowchart", re.MULTILINE),
-    "graph": re.compile(r"^\s*graph\s", re.MULTILINE),
-    "sequenceDiagram": re.compile(r"^\s*sequenceDiagram", re.MULTILINE),
-    "classDiagram": re.compile(r"^\s*classDiagram", re.MULTILINE),
-    "erDiagram": re.compile(r"^\s*erDiagram", re.MULTILINE),
-    "stateDiagram": re.compile(r"^\s*stateDiagram", re.MULTILINE),
-    "gantt": re.compile(r"^\s*gantt", re.MULTILINE),
-    "pie": re.compile(r"^\s*pie", re.MULTILINE),
-    "gitGraph": re.compile(r"^\s*gitGraph", re.MULTILINE),
-    "journey": re.compile(r"^\s*journey", re.MULTILINE),
-    "mindmap": re.compile(r"^\s*mindmap", re.MULTILINE),
-    "timeline": re.compile(r"^\s*timeline", re.MULTILINE),
-    "sankey": re.compile(r"^\s*sankey", re.MULTILINE),
-    "xychart": re.compile(r"^\s*xychart", re.MULTILINE),
-    "block": re.compile(r"^\s*block", re.MULTILINE),
-    "architecture": re.compile(r"^\s*architecture", re.MULTILINE),
-    "kanban": re.compile(r"^\s*kanban", re.MULTILINE),
-    "packet": re.compile(r"^\s*packet", re.MULTILINE),
-    "quadrantChart": re.compile(r"^\s*quadrantChart", re.MULTILINE),
+    "flowchart": re.compile(r"^\s*flowchart\b"),
+    "graph": re.compile(r"^\s*graph\b"),
+    "sequenceDiagram": re.compile(r"^\s*sequenceDiagram\b"),
+    "classDiagram": re.compile(r"^\s*classDiagram\b"),
+    "erDiagram": re.compile(r"^\s*erDiagram\b"),
+    "stateDiagram": re.compile(r"^\s*stateDiagram\b"),
+    "gantt": re.compile(r"^\s*gantt\b"),
+    "pie": re.compile(r"^\s*pie\b"),
+    "gitGraph": re.compile(r"^\s*gitGraph\b"),
+    "journey": re.compile(r"^\s*journey\b"),
+    "mindmap": re.compile(r"^\s*mindmap\b"),
+    "timeline": re.compile(r"^\s*timeline\b"),
+    "sankey": re.compile(r"^\s*sankey\b"),
+    "xychart": re.compile(r"^\s*xychart\b"),
+    "block": re.compile(r"^\s*block\b"),
+    "architecture": re.compile(r"^\s*architecture\b"),
+    "kanban": re.compile(r"^\s*kanban\b"),
+    "packet": re.compile(r"^\s*packet\b"),
+    "quadrantChart": re.compile(r"^\s*quadrantChart\b"),
+    "C4Context": re.compile(r"^\s*C4Context\b"),
+    "C4Container": re.compile(r"^\s*C4Container\b"),
+    "C4Component": re.compile(r"^\s*C4Component\b"),
+    "C4Dynamic": re.compile(r"^\s*C4Dynamic\b"),
+    "C4Deployment": re.compile(r"^\s*C4Deployment\b"),
+    "requirementDiagram": re.compile(r"^\s*requirementDiagram\b"),
+    "zenuml": re.compile(r"^\s*zenuml\b", re.IGNORECASE),
+    "ishikawa": re.compile(r"^\s*ishikawa\b"),
+    "radar": re.compile(r"^\s*radar\b"),
+    "wardley": re.compile(r"^\s*wardley\b"),
+    "venn": re.compile(r"^\s*venn\b"),
 }
 
 
 def _detect_type(definition: str) -> str:
-    """Detect the Mermaid diagram type from the first keyword in the definition."""
+    """Detect the Mermaid diagram type from the first non-empty line of the definition."""
+    first_line = ""
+    for line in definition.splitlines():
+        stripped = line.strip()
+        if stripped:
+            first_line = stripped
+            break
     for name, pattern in _DIAGRAM_TYPES.items():
-        if pattern.search(definition):
+        if pattern.match(first_line):
             return name
     return "unknown"
 

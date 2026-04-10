@@ -86,8 +86,22 @@ def deliver_image(
     """Return rendered image data as an inline Image or a temporary download link.
 
     Shared by render_diagram, render_mermaid, and render_plantuml.
+
+    When *download_link* is True the image is stored via ``image_store.store``
+    and served by the ``/images/{token}`` route which currently hardcodes
+    ``image/png``.  Passing a non-PNG *fmt* with *download_link=True* would
+    silently serve the wrong MIME type, so we reject that combination until
+    ``ImageEntry`` / ``image_store.store`` are extended to persist format metadata.
     """
     if download_link:
+        if fmt != "png":
+            raise ValueError(
+                f"deliver_image does not support download_link=True with fmt={fmt!r}. "
+                "ImageEntry and image_store.store do not persist format/MIME metadata, "
+                "so the /images/{{token}} route would serve the image as image/png. "
+                "Use an inline Image(data, format=fmt) instead, or extend ImageStore "
+                "to include format."
+            )
         token = image_store.store(data, filename)
         return f"/images/{token}"
 

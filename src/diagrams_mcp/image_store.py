@@ -78,16 +78,17 @@ image_store = ImageStore()
 
 
 def deliver_image(
-    png_data: bytes,
+    data: bytes,
     filename: str,
     download_link: bool,
+    fmt: str = "png",
 ) -> Image | str:
-    """Return rendered PNG data as an inline Image or a temporary download link.
+    """Return rendered image data as an inline Image or a temporary download link.
 
     Shared by render_diagram, render_mermaid, and render_plantuml.
     """
     if download_link:
-        token = image_store.store(png_data, filename)
+        token = image_store.store(data, filename)
         return f"/images/{token}"
 
-    return Image(data=png_data, format="png")
+    return Image(data=data, format=fmt)

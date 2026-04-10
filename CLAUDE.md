@@ -19,7 +19,7 @@ ruff check .
 ruff format .
 
 # Run the MCP server
-diagrams-mcp
+diagrams-mcp-server
 ```
 
 ## Architecture

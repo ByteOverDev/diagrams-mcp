@@ -17,8 +17,7 @@ def test_find_equivalent_ec2_to_gcp():
     assert result["source"]["node"] == "EC2"
     assert result["source"]["provider"] == "aws"
     assert any(
-        e["node"] == "ComputeEngine" and e["provider"] == "gcp"
-        for e in result["equivalents"]
+        e["node"] == "ComputeEngine" and e["provider"] == "gcp" for e in result["equivalents"]
     )
 
 
@@ -60,8 +59,7 @@ def test_find_equivalent_case_insensitive():
     assert lower["source"]["node"] == "EC2"
     assert lower["source"]["provider"] == "aws"
     assert any(
-        e["node"] == "ComputeEngine" and e["provider"] == "gcp"
-        for e in lower["equivalents"]
+        e["node"] == "ComputeEngine" and e["provider"] == "gcp" for e in lower["equivalents"]
     )
 
 
@@ -154,6 +152,5 @@ def test_category_node_importable(cat, provider, service, node):
     """Every node in CATEGORIES must be importable from the diagrams package."""
     mod = importlib.import_module(f"diagrams.{provider}.{service}")
     assert hasattr(mod, node), (
-        f"Node {node!r} not found in diagrams.{provider}.{service} "
-        f"(category: {cat})"
+        f"Node {node!r} not found in diagrams.{provider}.{service} (category: {cat})"
     )

@@ -3,26 +3,37 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "diagrams-mcp"
+name = "diagrams-mcp-server"
 version = "0.1.0"
 description = "MCP server for rendering diagrams using mingrammer/diagrams, Mermaid, and PlantUML"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-authors = [{ name = "Mykola Skrypets" }]
+authors = [{ name = "Mykola Skrypets", email = "nick@byteover.dev" }]
 keywords = ["mcp", "diagrams", "architecture", "graphviz", "mermaid", "plantuml"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
     "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
-    "diagrams==0.25.1",
-    "fastmcp==3.2.0",
+    "diagrams>=0.23",
+    "fastmcp>=3.0",
 ]
 
 [project.scripts]
-diagrams-mcp = "diagrams_mcp.server:main"
+diagrams-mcp-server = "diagrams_mcp.server:main"
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+
+[project.urls]
+Homepage = "https://github.com/ByteOverDev/diagrams-mcp"
+Repository = "https://github.com/ByteOverDev/diagrams-mcp"
+"Bug Tracker" = "https://github.com/ByteOverDev/diagrams-mcp/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/diagrams_mcp"]

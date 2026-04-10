@@ -37,4 +37,4 @@ USER appuser
 ENV FASTMCP_TRANSPORT=http
 ENV FASTMCP_HOST=0.0.0.0
 
-CMD ["sh", "-c", "FASTMCP_PORT=${PORT:-8000} diagrams-mcp"]
+CMD ["sh", "-c", "FASTMCP_PORT=${PORT:-8000} diagrams-mcp-server"]

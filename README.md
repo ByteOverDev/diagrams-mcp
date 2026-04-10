@@ -148,16 +148,6 @@ with Diagram("ECS Service", direction="LR"):
 
 ![Mermaid flowchart](https://raw.githubusercontent.com/ByteOverDev/diagrams-mcp/main/assets/mermaid-example.png)
 
-```mermaid
-graph LR
-    A[Push to main] --> B[Run Tests]
-    B --> C{Tests pass?}
-    C -->|Yes| D[Build Image]
-    C -->|No| E[Notify Team]
-    D --> F[Deploy to Staging]
-    F --> G[Deploy to Production]
-```
-
 ### Sequence Diagram (PlantUML)
 
 > "Show the authentication flow between a client, API gateway, and auth service"

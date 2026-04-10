@@ -1,4 +1,7 @@
-from diagrams_mcp.image_store import ImageStore
+import pytest
+from fastmcp.utilities.types import Image
+
+from diagrams_mcp.image_store import ImageStore, deliver_image
 
 
 def test_store_and_retrieve():
@@ -58,3 +61,32 @@ def test_multiple_stores_independent():
     assert t1 != t2
     assert store.get(t1).data == b"img1"
     assert store.get(t2).data == b"img2"
+
+
+def test_deliver_image_inline_default_png():
+    """deliver_image returns an Image with format=png by default."""
+    result = deliver_image(b"png-bytes", "test", download_link=False)
+    assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/png"
+
+
+def test_deliver_image_inline_custom_fmt():
+    """deliver_image passes fmt through to Image for inline delivery."""
+    result = deliver_image(b"<svg></svg>", "test", download_link=False, fmt="svg+xml")
+    assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/svg+xml"
+
+
+def test_deliver_image_download_link_png():
+    """deliver_image returns a /images/ path for download_link=True with default PNG."""
+    result = deliver_image(b"png-bytes", "test", download_link=True)
+    assert isinstance(result, str)
+    assert result.startswith("/images/")
+
+
+def test_deliver_image_download_link_rejects_non_png():
+    """deliver_image raises ValueError when download_link=True and fmt is not png."""
+    with pytest.raises(ValueError, match="does not support download_link=True"):
+        deliver_image(b"<svg></svg>", "test", download_link=True, fmt="svg+xml")

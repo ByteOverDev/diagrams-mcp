@@ -78,16 +78,31 @@ image_store = ImageStore()
 
 
 def deliver_image(
-    png_data: bytes,
+    data: bytes,
     filename: str,
     download_link: bool,
+    fmt: str = "png",
 ) -> Image | str:
-    """Return rendered PNG data as an inline Image or a temporary download link.
+    """Return rendered image data as an inline Image or a temporary download link.
 
     Shared by render_diagram, render_mermaid, and render_plantuml.
+
+    When *download_link* is True the image is stored via ``image_store.store``
+    and served by the ``/images/{token}`` route which currently hardcodes
+    ``image/png``.  Passing a non-PNG *fmt* with *download_link=True* would
+    silently serve the wrong MIME type, so we reject that combination until
+    ``ImageEntry`` / ``image_store.store`` are extended to persist format metadata.
     """
     if download_link:
-        token = image_store.store(png_data, filename)
+        if fmt != "png":
+            raise ValueError(
+                f"deliver_image does not support download_link=True with fmt={fmt!r}. "
+                "ImageEntry and image_store.store do not persist format/MIME metadata, "
+                "so the /images/{token} route would serve the image as image/png. "
+                "Use an inline Image(data, format=fmt) instead, or extend ImageStore "
+                "to include format."
+            )
+        token = image_store.store(data, filename)
         return f"/images/{token}"
 
-    return Image(data=png_data, format="png")
+    return Image(data=data, format=fmt)

@@ -115,3 +115,16 @@ def test_run_cli_minimal_env():
     assert "PATH" in env_dict
     assert "HOME" in env_dict
     assert "SECRET_KEY" not in env_dict
+
+
+def test_run_code_graphviz_not_found_stderr():
+    """run_code includes ExecutableNotFound in ToolError when graphviz raises it."""
+    # Simulate what happens when dot is missing: the graphviz library raises
+    # ExecutableNotFound which shows up in stderr
+    code = (
+        "raise RuntimeError(\"failed to execute 'dot', "
+        "make sure the Graphviz executables are on your systems' PATH\")"
+    )
+    with pytest.raises(ToolError, match="failed to execute.*dot") as exc_info:
+        run_code(code)
+    assert "Diagram code failed" in str(exc_info.value)

@@ -11,7 +11,7 @@ from diagrams_mcp.prompts import (
 def test_prompts_registered_on_server():
     from diagrams_mcp.server import mcp
 
-    prompts = asyncio.get_event_loop().run_until_complete(mcp.list_prompts())
+    prompts = asyncio.run(mcp.list_prompts())
     names = {p.name for p in prompts}
     assert "architecture_diagram" in names
     assert "sequence_flow" in names
@@ -38,6 +38,15 @@ def test_architecture_diagram_with_provider():
     assert "diagrams://reference/diagram" in text
     # Should not contain the "ask which provider" language
     assert "list_providers" not in text
+
+
+def test_architecture_diagram_normalizes_provider():
+    text = architecture_diagram(provider="AWS")
+    # Display text keeps original casing
+    assert "**AWS**" in text
+    # Tool-call examples use lowercase canonical ID
+    assert "list_services('aws')" in text
+    assert "list_nodes('aws'" in text
 
 
 # --- sequence_flow ---

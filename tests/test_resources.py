@@ -12,7 +12,7 @@ from diagrams_mcp.resources import (
 def test_reference_resources_registered_on_server():
     from diagrams_mcp.server import mcp
 
-    resources = asyncio.get_event_loop().run_until_complete(mcp.list_resources())
+    resources = asyncio.run(mcp.list_resources())
     uris = {str(r.uri) for r in resources}
     assert "diagrams://reference/diagram" in uris
     assert "diagrams://reference/edge" in uris

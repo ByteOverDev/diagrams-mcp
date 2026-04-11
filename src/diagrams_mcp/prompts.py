@@ -8,14 +8,15 @@ def architecture_diagram(provider: str = "") -> str:
     """Guide the user through building a cloud architecture diagram: pick a provider,
     discover nodes, compose code, and render."""
     if provider:
+        provider_id = provider.lower()
         return (
             f"I'd like to create a cloud architecture diagram using **{provider}** "
             f"infrastructure components.\n\n"
             f"Here's the workflow to follow:\n\n"
             f"1. Use `search_nodes` to find the {provider} components I need "
             f"(e.g., `search_nodes('load balancer')` or `search_nodes('database')`). "
-            f"You can also browse with `list_services('{provider}')` then "
-            f"`list_nodes('{provider}', '<service>')`.\n"
+            f"You can also browse with `list_services('{provider_id}')` then "
+            f"`list_nodes('{provider_id}', '<service>')`.\n"
             f"2. Read `diagrams://reference/diagram` for `Diagram` constructor options "
             f"(direction, curvestyle, graph_attr).\n"
             f"3. Read `diagrams://reference/edge` for edge styling and operators "

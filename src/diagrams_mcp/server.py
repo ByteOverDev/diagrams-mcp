@@ -19,7 +19,7 @@ mcp = FastMCP(
         "Use search_nodes to find components by keyword (returns import paths), or browse with "
         "list_providers -> list_services -> list_nodes. Read the diagrams://reference/diagram, "
         "diagrams://reference/edge, and diagrams://reference/cluster resources for constructor "
-        "options and usage examples. Then render_diagram to produce PNG images.\n\n"
+        "options and usage examples. Then render_diagram to produce images.\n\n"
         "**Mermaid** (flowcharts, sequence, class, ER, state, Gantt): "
         "Read diagrams://reference/mermaid for syntax. "
         "Then render_mermaid with a definition string.\n\n"

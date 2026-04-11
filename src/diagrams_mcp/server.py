@@ -4,6 +4,7 @@ from fastmcp import FastMCP
 from starlette.responses import JSONResponse, Response
 
 from diagrams_mcp.image_store import _FORMAT_MAP, image_store
+from diagrams_mcp.prompts import prompts_app
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
 from diagrams_mcp.tools.equivalence import equivalence
@@ -49,6 +50,7 @@ mcp.mount(references)
 mcp.mount(mermaid)
 mcp.mount(plantuml)
 mcp.mount(equivalence)
+mcp.mount(prompts_app)
 
 
 @mcp.custom_route("/health", methods=["GET"])

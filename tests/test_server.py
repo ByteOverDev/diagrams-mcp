@@ -68,7 +68,7 @@ def test_serve_image_returns_pdf():
 
 def test_equivalence_tools_registered():
     """find_equivalent and list_categories tools are mounted on the root server."""
-    tools = asyncio.get_event_loop().run_until_complete(mcp.list_tools())
+    tools = asyncio.run(mcp.list_tools())
     names = {t.name for t in tools}
     assert "find_equivalent" in names
     assert "list_categories" in names

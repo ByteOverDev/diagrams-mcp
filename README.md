@@ -197,3 +197,5 @@ Use `list_providers()` and `search_nodes(query)` to discover available nodes.
 ## License
 
 MIT
+
+<!-- mcp-name: io.github.ByteOverDev/diagrams-mcp-server -->

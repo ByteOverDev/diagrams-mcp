@@ -83,7 +83,7 @@ def _mermaid_live_url(code: str) -> str:
     return f"https://mermaid.live/edit#pako:{encoded}"
 
 
-@mermaid.tool(timeout=30.0)
+@mermaid.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_mermaid(
     definition: str,
     filename: str = "diagram",

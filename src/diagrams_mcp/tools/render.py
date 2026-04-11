@@ -90,7 +90,7 @@ def _enhance_import_error(message: str) -> str:
     return message
 
 
-@render.tool(timeout=30.0)
+@render.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_diagram(
     code: str,
     filename: str = "diagram",

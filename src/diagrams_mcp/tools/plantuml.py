@@ -15,7 +15,7 @@ plantuml = FastMCP("PlantUML")
 _PLANTUML_JAR = os.environ.get("PLANTUML_JAR", "/opt/plantuml.jar")
 
 
-@plantuml.tool(timeout=30.0)
+@plantuml.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_plantuml(
     definition: str,
     filename: str = "diagram",

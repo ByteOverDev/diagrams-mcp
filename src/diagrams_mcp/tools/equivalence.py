@@ -399,7 +399,7 @@ def _collect_equivalents(
     return equivalents
 
 
-@equivalence.tool
+@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     """Find cross-provider equivalents for a diagram node by infrastructure role.
 
@@ -476,7 +476,7 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     }
 
 
-@equivalence.tool
+@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_categories() -> list[dict]:
     """List all infrastructure role categories with their mapped nodes.
 

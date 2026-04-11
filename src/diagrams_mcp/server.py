@@ -29,7 +29,16 @@ mcp = FastMCP(
         "**Cross-provider equivalence**: "
         "Use find_equivalent to find equivalent services across providers "
         "(e.g. find_equivalent('EC2', 'gcp')), or list_categories to see all "
-        "mapped infrastructure roles."
+        "mapped infrastructure roles.\n\n"
+        "**Tool selection**: Use render_diagram for cloud architecture with real provider icons "
+        "(AWS, GCP, Azure, K8s, on-prem). Use render_mermaid for flowcharts, sequence diagrams, "
+        "ER diagrams, and Gantt charts. Use render_plantuml for UML-heavy diagrams "
+        "(class, component, deployment).\n\n"
+        "**Workflow**: Always use search_nodes to verify node names and get import paths before "
+        "writing render_diagram code. Invalid imports are the most common error.\n\n"
+        "**Output options**: All render tools support `format` "
+        "(png, svg, pdf — PlantUML: png/svg only) "
+        "and `download_link` (returns a temporary URL instead of inline image data)."
     ),
     mask_error_details=True,
 )

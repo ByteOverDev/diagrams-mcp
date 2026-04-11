@@ -29,6 +29,14 @@ def test_diagram_reference_contains_parameters():
     assert "curvestyle" in text
 
 
+def test_diagram_reference_contains_sandbox_overrides():
+    text = diagram_reference()
+    assert "MCP Sandbox Overrides" in text
+    assert "show" in text
+    assert "outformat" in text
+    assert "filename" in text
+
+
 def test_edge_reference_contains_operators():
     text = edge_reference()
     assert ">>" in text
@@ -52,9 +60,23 @@ def test_mermaid_reference_contains_syntax():
     assert "render_mermaid" in text
 
 
+def test_mermaid_reference_contains_output_options():
+    text = mermaid_reference()
+    assert "Output Options" in text
+    assert "format" in text
+    assert "download_link" in text
+
+
 def test_plantuml_reference_contains_syntax():
     text = plantuml_reference()
     assert "@startuml" in text
     assert "@enduml" in text
     assert "render_plantuml" in text
     assert "class" in text.lower()
+
+
+def test_plantuml_reference_contains_output_options():
+    text = plantuml_reference()
+    assert "Output Options" in text
+    assert "format" in text
+    assert "download_link" in text

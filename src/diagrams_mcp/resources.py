@@ -47,6 +47,18 @@ with Diagram("Web Service", direction="TB", curvestyle="curved",
              graph_attr={"bgcolor": "transparent"}):
     ...
 ```
+
+## MCP Sandbox Overrides
+
+The MCP server automatically applies the following when running your code:
+
+- **`show`** is forced to `False` — do not set it
+- **`outformat`** is overridden to match the tool's `format` parameter — do not set it
+- **`filename`** is redirected to a temp directory — the tool's `filename` parameter
+  controls the output name
+
+You only need to set `name`, `direction`, `curvestyle`, and styling attributes in your
+`Diagram(...)` call.
 """
 
 
@@ -250,6 +262,11 @@ gantt
 - **Arrow types**: `-->` solid, `-.->` dotted, `==>` thick, `--text-->` labeled
 - **Subgraphs**: `subgraph title ... end` for grouping
 - **Direction**: `graph TD` (top-down), `graph LR` (left-right), `graph BT`, `graph RL`
+
+## Output Options
+
+`render_mermaid` supports `format` (`"png"`, `"svg"`, or `"pdf"`) and `download_link`
+(returns a temporary URL instead of inline image data).
 """
 
 
@@ -368,4 +385,9 @@ node "DB Server" {
 - **Notes**: `note left of X : text`, `note right of X : text`, `note over X : text`
 - **Colors**: `#Red`, `#FF0000`, `skinparam backgroundColor #EEEEEE`
 - **Grouping**: `package`, `node`, `folder`, `frame`, `cloud`, `database`
+
+## Output Options
+
+`render_plantuml` supports `format` (`"png"` or `"svg"` — PDF is not supported) and
+`download_link` (returns a temporary URL instead of inline image data).
 """

@@ -3,9 +3,15 @@
 import secrets
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from fastmcp.utilities.types import Image
+from fastmcp.utilities.types import File, Image
+
+_FORMAT_MAP: dict[str, dict[str, str]] = {
+    "png": {"mime": "image/png", "ext": ".png", "image_fmt": "png"},
+    "svg": {"mime": "image/svg+xml", "ext": ".svg", "image_fmt": "svg+xml"},
+    "pdf": {"mime": "application/pdf", "ext": ".pdf", "image_fmt": "pdf"},
+}
 
 
 @dataclass(slots=True)
@@ -15,6 +21,7 @@ class ImageEntry:
     data: bytes
     filename: str
     expires_at: float
+    fmt: str = field(default="png")
 
 
 class ImageStore:
@@ -31,12 +38,15 @@ class ImageStore:
         self._entries: dict[str, ImageEntry] = {}
         self._lock = threading.Lock()
 
-    def store(self, data: bytes, filename: str, ttl: float = DEFAULT_TTL) -> str:
+    def store(
+        self, data: bytes, filename: str, *, fmt: str = "png", ttl: float = DEFAULT_TTL
+    ) -> str:
         """Store image data and return an unguessable URL-safe token.
 
         Args:
-            data: Raw PNG bytes.
+            data: Raw image/document bytes.
             filename: Original filename (without extension).
+            fmt: Output format key (``"png"``, ``"svg"``, or ``"pdf"``).
             ttl: Time-to-live in seconds. Defaults to 15 minutes.
 
         Returns:
@@ -49,6 +59,7 @@ class ImageStore:
                 data=data,
                 filename=filename,
                 expires_at=time.time() + ttl,
+                fmt=fmt,
             )
         return token
 
@@ -82,27 +93,20 @@ def deliver_image(
     filename: str,
     download_link: bool,
     fmt: str = "png",
-) -> Image | str:
-    """Return rendered image data as an inline Image or a temporary download link.
+) -> Image | File | str:
+    """Return rendered image data as an inline Image/File or a temporary download link.
 
     Shared by render_diagram, render_mermaid, and render_plantuml.
-
-    When *download_link* is True the image is stored via ``image_store.store``
-    and served by the ``/images/{token}`` route which currently hardcodes
-    ``image/png``.  Passing a non-PNG *fmt* with *download_link=True* would
-    silently serve the wrong MIME type, so we reject that combination until
-    ``ImageEntry`` / ``image_store.store`` are extended to persist format metadata.
     """
+    if fmt not in _FORMAT_MAP:
+        raise ValueError(f"Unknown format {fmt!r}. Supported: {', '.join(_FORMAT_MAP)}")
+
     if download_link:
-        if fmt != "png":
-            raise ValueError(
-                f"deliver_image does not support download_link=True with fmt={fmt!r}. "
-                "ImageEntry and image_store.store do not persist format/MIME metadata, "
-                "so the /images/{token} route would serve the image as image/png. "
-                "Use an inline Image(data, format=fmt) instead, or extend ImageStore "
-                "to include format."
-            )
-        token = image_store.store(data, filename)
+        token = image_store.store(data, filename, fmt=fmt)
         return f"/images/{token}"
 
-    return Image(data=data, format=fmt)
+    if fmt == "pdf":
+        return File(data=data, format="pdf")
+
+    image_fmt = _FORMAT_MAP[fmt]["image_fmt"]
+    return Image(data=data, format=image_fmt)

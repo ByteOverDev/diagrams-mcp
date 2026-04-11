@@ -44,6 +44,28 @@ def test_serve_image_expired_returns_404():
         assert response.status_code == 404
 
 
+def test_serve_image_returns_svg():
+    """GET /images/{token} returns SVG with correct headers when stored as svg."""
+    token = image_store.store(b"<svg></svg>", "my_diagram", fmt="svg")
+    app = mcp.http_app()
+    with TestClient(app) as client:
+        response = client.get(f"/images/{token}")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "image/svg+xml"
+        assert 'filename="my_diagram.svg"' in response.headers["content-disposition"]
+
+
+def test_serve_image_returns_pdf():
+    """GET /images/{token} returns PDF with correct headers when stored as pdf."""
+    token = image_store.store(b"%PDF-1.4 fake", "my_diagram", fmt="pdf")
+    app = mcp.http_app()
+    with TestClient(app) as client:
+        response = client.get(f"/images/{token}")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/pdf"
+        assert 'filename="my_diagram.pdf"' in response.headers["content-disposition"]
+
+
 def test_equivalence_tools_registered():
     """find_equivalent and list_categories tools are mounted on the root server."""
     tools = asyncio.get_event_loop().run_until_complete(mcp.list_tools())

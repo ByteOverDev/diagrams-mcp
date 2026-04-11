@@ -1,5 +1,5 @@
 import pytest
-from fastmcp.utilities.types import Image
+from fastmcp.utilities.types import File, Image
 
 from diagrams_mcp.image_store import ImageStore, deliver_image
 
@@ -71,12 +71,18 @@ def test_deliver_image_inline_default_png():
     assert content.mimeType == "image/png"
 
 
-def test_deliver_image_inline_custom_fmt():
-    """deliver_image passes fmt through to Image for inline delivery."""
-    result = deliver_image(b"<svg></svg>", "test", download_link=False, fmt="svg+xml")
+def test_deliver_image_inline_svg():
+    """deliver_image returns an Image with svg+xml MIME for fmt='svg'."""
+    result = deliver_image(b"<svg></svg>", "test", download_link=False, fmt="svg")
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/svg+xml"
+
+
+def test_deliver_image_inline_pdf():
+    """deliver_image returns a File with application/pdf MIME for fmt='pdf'."""
+    result = deliver_image(b"%PDF-1.4 fake", "test", download_link=False, fmt="pdf")
+    assert isinstance(result, File)
 
 
 def test_deliver_image_download_link_png():
@@ -86,7 +92,30 @@ def test_deliver_image_download_link_png():
     assert result.startswith("/images/")
 
 
-def test_deliver_image_download_link_rejects_non_png():
-    """deliver_image raises ValueError when download_link=True and fmt is not png."""
-    with pytest.raises(ValueError, match="does not support download_link=True"):
-        deliver_image(b"<svg></svg>", "test", download_link=True, fmt="svg+xml")
+def test_deliver_image_download_link_svg():
+    """deliver_image returns a /images/ path for download_link=True with fmt='svg'."""
+    result = deliver_image(b"<svg></svg>", "test", download_link=True, fmt="svg")
+    assert isinstance(result, str)
+    assert result.startswith("/images/")
+
+
+def test_deliver_image_download_link_pdf():
+    """deliver_image returns a /images/ path for download_link=True with fmt='pdf'."""
+    result = deliver_image(b"%PDF-1.4 fake", "test", download_link=True, fmt="pdf")
+    assert isinstance(result, str)
+    assert result.startswith("/images/")
+
+
+def test_store_preserves_fmt():
+    """ImageStore preserves the fmt field through store/get."""
+    store = ImageStore()
+    token = store.store(b"<svg></svg>", "test", fmt="svg")
+    entry = store.get(token)
+    assert entry is not None
+    assert entry.fmt == "svg"
+
+
+def test_deliver_image_rejects_unknown_fmt():
+    """deliver_image raises ValueError for an unknown format."""
+    with pytest.raises(ValueError, match="Unknown format"):
+        deliver_image(b"data", "test", download_link=False, fmt="bmp")

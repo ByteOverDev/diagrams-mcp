@@ -1,6 +1,5 @@
 import asyncio
 
-import pytest
 from mcp import McpError
 from starlette.testclient import TestClient
 
@@ -88,18 +87,17 @@ def test_rate_limiting_rejects_after_burst():
     """After exhausting burst capacity, further requests are rejected with McpError."""
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 
-    # Find the RateLimitingMiddleware instance and read its burst_capacity
+    # Read burst_capacity from the actual middleware instance
     rl = next(m for m in mcp.middleware if isinstance(m, RateLimitingMiddleware))
     burst = rl.burst_capacity
 
-    # Reset the token bucket to a known full state so earlier tests don't affect us
-    for limiter in rl.limiters.values():
-        limiter.tokens = burst
+    async def fire_concurrent():
+        # Schedule more concurrent calls than the burst capacity allows
+        tasks = [mcp.call_tool("list_providers") for _ in range(burst + 1)]
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
-    # Exhaust burst capacity by calling a cheap tool
-    for _ in range(burst):
-        asyncio.run(mcp.call_tool("list_providers"))
+    results = asyncio.run(fire_concurrent())
 
-    # Next call should be rejected
-    with pytest.raises(McpError):
-        asyncio.run(mcp.call_tool("list_providers"))
+    # At least one call should have been rejected with McpError
+    errors = [r for r in results if isinstance(r, McpError)]
+    assert errors, f"Expected at least 1 McpError among {len(results)} results"

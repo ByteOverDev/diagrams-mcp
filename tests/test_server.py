@@ -1,5 +1,6 @@
 import asyncio
 
+from mcp import McpError
 from starlette.testclient import TestClient
 
 from diagrams_mcp.image_store import image_store
@@ -72,3 +73,31 @@ def test_equivalence_tools_registered():
     names = {t.name for t in tools}
     assert "find_equivalent" in names
     assert "list_categories" in names
+
+
+def test_rate_limiting_middleware_is_registered():
+    """RateLimitingMiddleware is present in the root server's middleware chain."""
+    from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
+    middleware_types = [type(m) for m in mcp.middleware]
+    assert RateLimitingMiddleware in middleware_types
+
+
+def test_rate_limiting_rejects_after_burst():
+    """After exhausting burst capacity, further requests are rejected with McpError."""
+    from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
+    # Read burst_capacity from the actual middleware instance
+    rl = next(m for m in mcp.middleware if isinstance(m, RateLimitingMiddleware))
+    burst = rl.burst_capacity
+
+    async def fire_concurrent():
+        # Schedule more concurrent calls than the burst capacity allows
+        tasks = [mcp.call_tool("list_providers") for _ in range(burst + 1)]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+    results = asyncio.run(fire_concurrent())
+
+    # At least one call should have been rejected with McpError
+    errors = [r for r in results if isinstance(r, McpError)]
+    assert errors, f"Expected at least 1 McpError among {len(results)} results"

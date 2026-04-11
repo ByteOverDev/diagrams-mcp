@@ -19,7 +19,7 @@ mcp = FastMCP(
         "Use search_nodes to find components by keyword (returns import paths), or browse with "
         "list_providers -> list_services -> list_nodes. Read the diagrams://reference/diagram, "
         "diagrams://reference/edge, and diagrams://reference/cluster resources for constructor "
-        "options and usage examples. Then render_diagram to produce PNG images.\n\n"
+        "options and usage examples. Then render_diagram to produce images.\n\n"
         "**Mermaid** (flowcharts, sequence, class, ER, state, Gantt): "
         "Read diagrams://reference/mermaid for syntax. "
         "Then render_mermaid with a definition string.\n\n"
@@ -29,7 +29,16 @@ mcp = FastMCP(
         "**Cross-provider equivalence**: "
         "Use find_equivalent to find equivalent services across providers "
         "(e.g. find_equivalent('EC2', 'gcp')), or list_categories to see all "
-        "mapped infrastructure roles."
+        "mapped infrastructure roles.\n\n"
+        "**Tool selection**: Use render_diagram for cloud architecture with real provider icons "
+        "(AWS, GCP, Azure, K8s, on-prem). Use render_mermaid for flowcharts, sequence diagrams, "
+        "ER diagrams, and Gantt charts. Use render_plantuml for UML-heavy diagrams "
+        "(class, component, deployment).\n\n"
+        "**Workflow**: Always use search_nodes to verify node names and get import paths before "
+        "writing render_diagram code. Invalid imports are the most common error.\n\n"
+        "**Output options**: All render tools support `format` "
+        "(png, svg, pdf — PlantUML: png/svg only) "
+        "and `download_link` (returns a temporary URL instead of inline image data)."
     ),
     mask_error_details=True,
 )

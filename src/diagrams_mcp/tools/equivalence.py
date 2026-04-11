@@ -399,13 +399,16 @@ def _collect_equivalents(
     return equivalents
 
 
-@equivalence.tool
+@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     """Find cross-provider equivalents for a diagram node by infrastructure role.
 
     Given a node name (e.g. 'EC2', 'Lambda', 'ComputeEngine'), returns the
     infrastructure role category it belongs to and the equivalent nodes from
     other providers.
+
+    If a node name is ambiguous, use list_categories to see all mapped roles
+    and pick a provider-specific node name.
 
     Args:
         node: Node class name to look up (case-insensitive, e.g. 'EC2', 'lambda').
@@ -476,9 +479,12 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     }
 
 
-@equivalence.tool
+@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_categories() -> list[dict]:
     """List all infrastructure role categories with their mapped nodes.
+
+    Use this to browse all available equivalence mappings, or to disambiguate
+    node names when find_equivalent reports ambiguity.
 
     Returns a list of category dicts, each with:
         category (str): Category identifier (e.g. 'virtual_machine').

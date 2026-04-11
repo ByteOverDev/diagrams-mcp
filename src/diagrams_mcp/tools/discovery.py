@@ -100,9 +100,12 @@ def _get_node_index() -> list[dict]:
     return _enumerate_all_nodes()
 
 
-@discovery.tool
+@discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_providers() -> list[str]:
-    """List all available diagram providers (aws, gcp, azure, k8s, onprem, etc.)."""
+    """List all available diagram providers (aws, gcp, azure, k8s, onprem, etc.).
+
+    Use list_providers -> list_services -> list_nodes to browse available node types
+    for a specific provider."""
     import diagrams
 
     return sorted(
@@ -112,7 +115,7 @@ def list_providers() -> list[str]:
     )
 
 
-@discovery.tool
+@discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_services(provider: str) -> list[str]:
     """List service categories for a provider (e.g. 'aws' -> ['compute', 'database', ...]).
 
@@ -128,7 +131,7 @@ def list_services(provider: str) -> list[str]:
     return sorted(m.name for m in pkgutil.iter_modules(mod.__path__) if not m.name.startswith("_"))
 
 
-@discovery.tool
+@discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_nodes(provider: str, service: str) -> list[dict]:
     """List available node classes for a provider.service combo.
 
@@ -160,9 +163,12 @@ def list_nodes(provider: str, service: str) -> list[dict]:
     return sorted(results, key=lambda r: r["name"])
 
 
-@discovery.tool
+@discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def search_nodes(query: str) -> list[dict]:
     """Search for diagram nodes by keyword across all providers and services.
+
+    For targeted browsing when you know the provider, use list_providers -> list_services ->
+    list_nodes instead.
 
     Args:
         query: Search term (case-insensitive substring match).

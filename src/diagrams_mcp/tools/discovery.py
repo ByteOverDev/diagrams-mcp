@@ -102,7 +102,10 @@ def _get_node_index() -> list[dict]:
 
 @discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_providers() -> list[str]:
-    """List all available diagram providers (aws, gcp, azure, k8s, onprem, etc.)."""
+    """List all available diagram providers (aws, gcp, azure, k8s, onprem, etc.).
+
+    Use list_providers -> list_services -> list_nodes to browse available node types
+    for a specific provider."""
     import diagrams
 
     return sorted(
@@ -163,6 +166,9 @@ def list_nodes(provider: str, service: str) -> list[dict]:
 @discovery.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def search_nodes(query: str) -> list[dict]:
     """Search for diagram nodes by keyword across all providers and services.
+
+    For targeted browsing when you know the provider, use list_providers -> list_services ->
+    list_nodes instead.
 
     Args:
         query: Search term (case-insensitive substring match).

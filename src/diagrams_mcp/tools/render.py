@@ -102,6 +102,10 @@ def render_diagram(
     The code must be a complete Python script using `from diagrams import ...` imports
     and a `with Diagram(...)` context manager block.
 
+    Use search_nodes to verify node names and get correct import paths before writing code.
+    Read the diagrams://reference/diagram, diagrams://reference/edge, and
+    diagrams://reference/cluster resources for constructor options and usage examples.
+
     Args:
         code: Full Python code using the diagrams library.
         filename: Output filename without extension.

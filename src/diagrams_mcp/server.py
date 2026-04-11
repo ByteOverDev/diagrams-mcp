@@ -1,6 +1,7 @@
 import re
 
 from fastmcp import FastMCP
+from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from starlette.responses import JSONResponse, Response
 
 from diagrams_mcp.image_store import _FORMAT_MAP, image_store
@@ -42,6 +43,15 @@ mcp = FastMCP(
         "and `download_link` (returns a temporary URL instead of inline image data)."
     ),
     mask_error_details=True,
+)
+
+# Rate limiting — outermost middleware, runs before all sub-app dispatch.
+# Token bucket: sustains 2 req/sec, allows bursts up to 5.
+mcp.add_middleware(
+    RateLimitingMiddleware(
+        max_requests_per_second=2.0,
+        burst_capacity=5,
+    )
 )
 
 mcp.mount(render)

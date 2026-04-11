@@ -19,9 +19,7 @@ _GRAPHVIZ_MISSING_MSG = (
     "Install with: brew install graphviz (macOS) or apt install graphviz (Linux)"
 )
 
-_RE_MODULE_NOT_FOUND = re.compile(
-    r"ModuleNotFoundError: No module named 'diagrams\.(\w+)\.(\w+)'"
-)
+_RE_MODULE_NOT_FOUND = re.compile(r"ModuleNotFoundError: No module named 'diagrams\.(\w+)\.(\w+)'")
 _RE_IMPORT_ERROR = re.compile(
     r"ImportError: cannot import name '(\w+)' from 'diagrams\.(\w+)\.(\w+)'"
 )

@@ -1,13 +1,13 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.ByteOverDev/diagrams-mcp-server",
+  "name": "io.github.mskry/diagrams-mcp-server",
   "title": "Diagrams MCP",
-  "description": "Generate cloud architecture diagrams, flowcharts, sequence diagrams, and more — powered by mingrammer/diagrams, Mermaid, and PlantUML.",
+  "description": "Generate cloud architecture diagrams, flowcharts, and sequence diagrams.",
   "repository": {
     "url": "https://github.com/ByteOverDev/diagrams-mcp",
     "source": "github"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "remotes": [
     {
       "type": "streamable-http",
@@ -18,7 +18,7 @@
     {
       "registryType": "pypi",
       "identifier": "diagrams-mcp-server",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       }

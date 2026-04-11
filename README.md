@@ -198,4 +198,4 @@ Use `list_providers()` and `search_nodes(query)` to discover available nodes.
 
 MIT
 
-<!-- mcp-name: io.github.ByteOverDev/diagrams-mcp-server -->
+<!-- mcp-name: io.github.mskry/diagrams-mcp-server -->

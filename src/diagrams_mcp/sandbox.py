@@ -22,6 +22,7 @@ _WRAPPER = textwrap.dedent("""\
 
     def _patched_init(self, *a, **kw):
         kw["show"] = False
+        kw["outformat"] = {outformat!r}
         fn = kw.get("filename", {filename!r})
         basename = os.path.basename(fn)
         if not basename or os.path.isabs(fn) or os.sep in fn or "/" in fn or "\\\\" in fn:
@@ -36,7 +37,9 @@ _WRAPPER = textwrap.dedent("""\
 _MAX_STDERR_LEN = 1600
 
 
-def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> Path:
+def run_code(
+    code: str, *, filename: str = "diagram", outformat: str = "png", timeout: float = 25.0
+) -> Path:
     """Execute diagram code in a subprocess and return the temp directory path.
 
     The caller is responsible for cleaning up the returned directory
@@ -60,7 +63,7 @@ def run_code(code: str, *, filename: str = "diagram", timeout: float = 25.0) -> 
         )
 
     tmpdir = tempfile.mkdtemp(prefix="diagrams_mcp_")
-    script = _WRAPPER.format(tmpdir=tmpdir, filename=filename) + code
+    script = _WRAPPER.format(tmpdir=tmpdir, filename=filename, outformat=outformat) + code
     script_path = Path(tmpdir) / "_render.py"
     script_path.write_text(script)
 

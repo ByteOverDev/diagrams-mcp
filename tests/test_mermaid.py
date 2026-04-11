@@ -10,15 +10,15 @@ from diagrams_mcp.tools.mermaid import _detect_type, _mermaid_live_url, render_m
 
 @has_mmdc
 def test_render_mermaid_simple():
-    """render_mermaid returns [Image, json_metadata] for valid Mermaid syntax."""
+    """render_mermaid returns [Image(png), json_metadata] for valid Mermaid syntax."""
     definition = "graph TD;\n    A-->B;\n    B-->C;"
     result = render_mermaid(definition=definition)
     assert isinstance(result, list)
     assert len(result) == 2
-    # First element: SVG image
+    # First element: PNG image (default format)
     assert isinstance(result[0], Image)
     content = result[0].to_image_content()
-    assert content.mimeType == "image/svg+xml"
+    assert content.mimeType == "image/png"
     assert len(content.data) > 0
     # Second element: JSON metadata
     meta = json.loads(result[1])
@@ -73,7 +73,7 @@ sequenceDiagram
     assert len(result) == 2
     assert isinstance(result[0], Image)
     content = result[0].to_image_content()
-    assert content.mimeType == "image/svg+xml"
+    assert content.mimeType == "image/png"
     meta = json.loads(result[1])
     assert meta["diagramType"] == "sequenceDiagram"
     assert meta["valid"] is True
@@ -215,3 +215,38 @@ def test_detect_type_block_beta():
 def test_detect_type_packet_beta():
     """_detect_type identifies packet-beta variant."""
     assert _detect_type("packet-beta\n    0-15: Header") == "packet"
+
+
+@has_mmdc
+def test_render_mermaid_svg():
+    """render_mermaid with format='svg' returns SVG Image."""
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition, format="svg")
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], Image)
+    content = result[0].to_image_content()
+    assert content.mimeType == "image/svg+xml"
+
+
+@has_mmdc
+def test_render_mermaid_pdf():
+    """render_mermaid with format='pdf' returns PDF File in result list."""
+    from fastmcp.utilities.types import File
+
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition, format="pdf")
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], File)
+
+
+@has_mmdc
+def test_render_mermaid_svg_download_link():
+    """render_mermaid with format='svg' and download_link=True returns a download path."""
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition, format="svg", download_link=True)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], str)
+    assert result[0].startswith("/images/")

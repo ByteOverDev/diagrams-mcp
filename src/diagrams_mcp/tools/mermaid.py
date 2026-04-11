@@ -5,6 +5,7 @@ import json
 import os
 import re
 import zlib
+from typing import Literal
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -86,6 +87,7 @@ def _mermaid_live_url(code: str) -> str:
 def render_mermaid(
     definition: str,
     filename: str = "diagram",
+    format: Literal["png", "svg", "pdf"] = "png",
     download_link: bool = False,
 ) -> list:
     """Render a Mermaid diagram definition and return the image with metadata.
@@ -93,13 +95,14 @@ def render_mermaid(
     The definition should be valid Mermaid syntax (e.g. flowchart, sequence,
     class, ER, state, or Gantt diagram).
 
-    Returns a list of content blocks: the rendered image (SVG inline or PNG
-    download link) plus a JSON text block with metadata including a
-    mermaid.live edit link for opening the diagram in a browser editor.
+    Returns a list of content blocks: the rendered image plus a JSON text
+    block with metadata including a mermaid.live edit link for opening the
+    diagram in a browser editor.
 
     Args:
         definition: Mermaid diagram definition text.
         filename: Output filename without extension.
+        format: Output format — ``"png"`` (default), ``"svg"``, or ``"pdf"``.
         download_link: If True, store the image on the server and return a
                        temporary download URL path (/images/{token}) instead of
                        the inline image. The link expires after 15 minutes.
@@ -107,15 +110,13 @@ def render_mermaid(
     preview_link = _mermaid_live_url(definition)
     diagram_type = _detect_type(definition)
 
-    fmt = "png" if download_link else "svg"
-    cmd = ["mmdc", "-i", "-", "-o", "-", "-e", fmt]
+    cmd = ["mmdc", "-i", "-", "-o", "-", "-e", format]
     if os.path.isfile(_PUPPETEER_CONFIG):
         cmd.extend(["-p", _PUPPETEER_CONFIG])
 
     try:
         image_data = run_cli(cmd, input_data=definition.encode())
-        image_fmt = "png" if download_link else "svg+xml"
-        image_result = deliver_image(image_data, filename, download_link, fmt=image_fmt)
+        image_result = deliver_image(image_data, filename, download_link, fmt=format)
         metadata = {
             "diagramCode": definition,
             "diagramType": diagram_type,

@@ -49,3 +49,20 @@ class Car {
 """
     result = render_plantuml(definition=definition)
     assert isinstance(result, Image)
+
+
+@has_plantuml
+def test_render_plantuml_svg():
+    """render_plantuml with format='svg' returns an SVG Image."""
+    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
+    result = render_plantuml(definition=definition, format="svg")
+    assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/svg+xml"
+
+
+def test_render_plantuml_pdf_rejected():
+    """render_plantuml raises ToolError when format='pdf' is requested."""
+    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
+    with pytest.raises(ToolError, match="PDF output is not supported for PlantUML"):
+        render_plantuml(definition=definition, format="pdf")

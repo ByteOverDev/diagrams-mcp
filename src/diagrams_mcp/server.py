@@ -3,7 +3,7 @@ import re
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse, Response
 
-from diagrams_mcp.image_store import image_store
+from diagrams_mcp.image_store import _FORMAT_MAP, image_store
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
 from diagrams_mcp.tools.equivalence import equivalence
@@ -54,10 +54,11 @@ async def serve_image(request):
     if entry is None:
         return JSONResponse({"error": "not found or expired"}, status_code=404)
     safe_name = _sanitize_filename(entry.filename)
+    fmt_info = _FORMAT_MAP.get(entry.fmt, _FORMAT_MAP["png"])
     return Response(
         content=entry.data,
-        media_type="image/png",
-        headers={"Content-Disposition": f'attachment; filename="{safe_name}.png"'},
+        media_type=fmt_info["mime"],
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}{fmt_info["ext"]}"'},
     )
 
 

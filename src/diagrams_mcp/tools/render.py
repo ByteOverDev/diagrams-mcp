@@ -1,5 +1,6 @@
 import re
 import shutil
+import sys
 from pathlib import Path
 
 from fastmcp import FastMCP
@@ -14,12 +15,25 @@ render = FastMCP("Render")
 
 _graphviz_available = shutil.which("dot") is not None
 
+
+def _graphviz_install_hint() -> str:
+    if sys.platform == "darwin":
+        return "Install with: brew install graphviz"
+    if sys.platform == "win32":
+        return (
+            "Install with: choco install graphviz  or download from https://graphviz.org/download/"
+        )
+    # Linux and other Unix-like
+    return "Install with: apt install graphviz (Debian/Ubuntu) or dnf install graphviz (Fedora)"
+
+
 _GRAPHVIZ_MISSING_MSG = (
-    "Graphviz is not installed. The render_diagram tool requires it.\n"
-    "Install with: brew install graphviz (macOS) or apt install graphviz (Linux)"
+    "Graphviz is not installed. The render_diagram tool requires it.\n" + _graphviz_install_hint()
 )
 
-_RE_MODULE_NOT_FOUND = re.compile(r"ModuleNotFoundError: No module named 'diagrams\.(\w+)\.(\w+)'")
+_RE_MODULE_NOT_FOUND = re.compile(
+    r"ModuleNotFoundError: No module named 'diagrams\.(\w+)(?:\.(\w+))?'"
+)
 _RE_IMPORT_ERROR = re.compile(
     r"ImportError: cannot import name '(\w+)' from 'diagrams\.(\w+)\.(\w+)'"
 )
@@ -27,18 +41,30 @@ _RE_IMPORT_ERROR = re.compile(
 
 def _enhance_import_error(message: str) -> str:
     """Detect import errors in ToolError messages and append suggestions."""
-    # Case 1: Bad service module (e.g., diagrams.aws.nonexistent)
+    # Case 1a: Bad provider (e.g., diagrams.nonexistent)
+    # Case 1b: Bad service module (e.g., diagrams.aws.nonexistent)
     m = _RE_MODULE_NOT_FOUND.search(message)
     if m:
         provider, bad_service = m.group(1), m.group(2)
         index = _get_node_index()
-        services = sorted({e["service"] for e in index if e["provider"] == provider})
-        if services:
-            suggestion = (
-                f"\n\nNo service '{bad_service}' in provider '{provider}'."
-                f"\nAvailable services: {', '.join(services)}"
-            )
-            return message + suggestion
+        if bad_service is None:
+            # Bad provider — suggest available providers
+            providers = sorted({e["provider"] for e in index})
+            if providers:
+                suggestion = (
+                    f"\n\nNo provider '{provider}' in diagrams."
+                    f"\nAvailable providers: {', '.join(providers)}"
+                )
+                return message + suggestion
+        else:
+            # Bad service within a known provider
+            services = sorted({e["service"] for e in index if e["provider"] == provider})
+            if services:
+                suggestion = (
+                    f"\n\nNo service '{bad_service}' in provider '{provider}'."
+                    f"\nAvailable services: {', '.join(services)}"
+                )
+                return message + suggestion
         return message
 
     # Case 2: Bad node class (e.g., NonexistentNode from diagrams.aws.compute)

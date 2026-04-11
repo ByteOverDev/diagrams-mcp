@@ -15,6 +15,23 @@ def test_render_missing_graphviz():
             render_diagram(code="print('hello')")
 
 
+@pytest.mark.parametrize(
+    "platform,expected",
+    [
+        ("darwin", "brew install graphviz"),
+        ("linux", "apt install graphviz"),
+        ("win32", "choco install graphviz"),
+    ],
+)
+def test_graphviz_install_hint_per_platform(platform, expected):
+    """_graphviz_install_hint returns platform-appropriate instructions."""
+    from diagrams_mcp.tools.render import _graphviz_install_hint
+
+    with patch("diagrams_mcp.tools.render.sys") as mock_sys:
+        mock_sys.platform = platform
+        assert expected in _graphviz_install_hint()
+
+
 @has_graphviz
 def test_render_simple_diagram():
     """render_diagram returns an Image for a valid diagram."""
@@ -77,6 +94,17 @@ with Diagram("Test"):
 """
     result = render_diagram(code=code)
     assert isinstance(result, Image)
+
+
+@has_graphviz
+def test_render_invalid_provider_import():
+    """render_diagram suggests valid providers for a bad provider import."""
+    code = "from diagrams.nonexistent import Foo"
+    with pytest.raises(ToolError, match="Available providers") as exc_info:
+        render_diagram(code=code)
+    msg = str(exc_info.value)
+    assert "nonexistent" in msg
+    assert "aws" in msg  # 'aws' is a known provider
 
 
 @has_graphviz

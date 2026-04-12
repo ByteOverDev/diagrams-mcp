@@ -89,7 +89,7 @@ def render_mermaid(
     filename: str = "diagram",
     format: Literal["png", "svg", "pdf"] = "png",
     download_link: bool = False,
-) -> list:
+):
     """Render a Mermaid diagram definition and return the image with metadata.
 
     The definition should be valid Mermaid syntax (e.g. flowchart, sequence,

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "diagrams-mcp-server"
-version = "0.2.0"
+version = "0.2.1"
 description = "MCP server for rendering diagrams using mingrammer/diagrams, Mermaid, and PlantUML"
 readme = "README.md"
 license = "MIT"

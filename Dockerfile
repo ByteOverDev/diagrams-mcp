@@ -7,14 +7,22 @@ RUN apt-get update \
         chromium \
         default-jre-headless \
         curl \
-        nodejs npm \
+        ca-certificates gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+# Node.js LTS via NodeSource (Debian's packaged npm is too old to create global bin shims)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && corepack enable pnpm
 
 # Mermaid CLI (skip bundled Chromium — use system Chromium above)
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-RUN npm install -g @mermaid-js/mermaid-cli \
-    && npm cache clean --force
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+    PNPM_HOME=/usr/local/share/pnpm
+ENV PATH="$PNPM_HOME:$PATH"
+RUN pnpm install -g @mermaid-js/mermaid-cli \
+    && mmdc --version
 
 # Puppeteer config for container compatibility
 COPY puppeteer-config.json /etc/mermaid/puppeteer-config.json

@@ -8,12 +8,14 @@ from diagrams_mcp.server import mcp
 
 
 def test_health_endpoint_returns_ok():
-    """The /health endpoint returns HTTP 200 with status ok."""
+    """The /health endpoint returns HTTP 200 with shields.io-compatible JSON."""
     app = mcp.http_app()
     with TestClient(app) as client:
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        data = response.json()
+        assert data["schemaVersion"] == 1
+        assert data["message"] == "up"
 
 
 def test_serve_image_returns_png():

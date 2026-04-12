@@ -65,7 +65,14 @@ mcp.mount(prompts_app)
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request):
-    return JSONResponse({"status": "ok"})
+    return JSONResponse(
+        {
+            "schemaVersion": 1,
+            "label": "Railway",
+            "message": "up",
+            "color": "green",
+        }
+    )
 
 
 @mcp.custom_route("/images/{token}", methods=["GET"])

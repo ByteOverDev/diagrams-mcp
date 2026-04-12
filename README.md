@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/diagrams-mcp-server)](https://pypi.org/project/diagrams-mcp-server/)
 [![CI](https://github.com/ByteOverDev/diagrams-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ByteOverDev/diagrams-mcp/actions/workflows/ci.yml)
-[![Railway](https://img.shields.io/endpoint?url=https://diagrams-mcp-production.up.railway.app/health)](https://diagrams-mcp-production.up.railway.app/health)
+[![Railway](https://img.shields.io/endpoint?url=https://diagrams-mcp-production.up.railway.app/health&logo=railway)](https://diagrams-mcp-production.up.railway.app/health)
 
 MCP server for generating cloud architecture diagrams, flowcharts, sequence diagrams, and more — powered by three rendering engines: [mingrammer/diagrams](https://github.com/mingrammer/diagrams), [Mermaid](https://mermaid.js.org/), and [PlantUML](https://plantuml.com/).
 

@@ -115,6 +115,21 @@ def test_store_preserves_fmt():
     assert entry.fmt == "svg"
 
 
+def test_deliver_image_download_link_with_base_url(monkeypatch):
+    """deliver_image prepends BASE_URL to download links when set."""
+    monkeypatch.setenv("BASE_URL", "https://example.up.railway.app")
+    result = deliver_image(b"png-bytes", "test", download_link=True)
+    assert isinstance(result, str)
+    assert result.startswith("https://example.up.railway.app/images/")
+
+
+def test_deliver_image_download_link_base_url_trailing_slash(monkeypatch):
+    """deliver_image strips trailing slash from BASE_URL to avoid double slashes."""
+    monkeypatch.setenv("BASE_URL", "https://example.up.railway.app/")
+    result = deliver_image(b"png-bytes", "test", download_link=True)
+    assert "//" not in result.split("://")[1]
+
+
 def test_deliver_image_rejects_unknown_fmt():
     """deliver_image raises ValueError for an unknown format."""
     with pytest.raises(ValueError, match="Unknown format"):

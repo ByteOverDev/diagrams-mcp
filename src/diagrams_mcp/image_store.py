@@ -1,5 +1,6 @@
 """In-memory store for temporary diagram images with TTL-based expiry."""
 
+import os
 import secrets
 import threading
 import time
@@ -103,7 +104,8 @@ def deliver_image(
 
     if download_link:
         token = image_store.store(data, filename, fmt=fmt)
-        return f"/images/{token}"
+        base_url = os.environ.get("BASE_URL", "").rstrip("/")
+        return f"{base_url}/images/{token}"
 
     if fmt == "pdf":
         return File(data=data, format="pdf")

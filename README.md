@@ -14,7 +14,10 @@ MCP server for generating cloud architecture diagrams, flowcharts, sequence diag
 
 Connect to the public hosted server — no installation required. All rendering engines and dependencies are pre-installed.
 
-Add to your MCP client configuration:
+<details>
+<summary><strong>Claude Desktop</strong></summary>
+
+Add to your `claude_desktop_config.json` (`Settings` → `Developer` → `Edit Config`):
 
 ```json
 {
@@ -26,7 +29,82 @@ Add to your MCP client configuration:
 }
 ```
 
-That's it — you're ready to generate diagrams.
+</details>
+
+<details>
+<summary><strong>Claude Code (CLI)</strong></summary>
+
+Run:
+
+```bash
+claude mcp add diagrams-mcp https://diagrams-mcp-production.up.railway.app/mcp
+```
+
+Or add to your `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "url": "https://diagrams-mcp-production.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Add to your `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "url": "https://diagrams-mcp-production.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+Add to your `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "serverUrl": "https://diagrams-mcp-production.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>VS Code</strong></summary>
+
+Add to your `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "diagrams-mcp": {
+      "type": "http",
+      "url": "https://diagrams-mcp-production.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+</details>
 
 ### Local Installation
 
@@ -64,7 +142,12 @@ pip install git+https://github.com/ByteOverDev/diagrams-mcp.git
 
 #### Configure your MCP client
 
-After installing, add to your MCP client configuration:
+<details>
+<summary><strong>Claude Desktop</strong></summary>
+
+Add to your `claude_desktop_config.json` (`Settings` → `Developer` → `Edit Config`):
+
+**uvx (recommended):**
 
 ```json
 {
@@ -77,7 +160,7 @@ After installing, add to your MCP client configuration:
 }
 ```
 
-Or if installed via pip:
+**pip:**
 
 ```json
 {
@@ -88,6 +171,144 @@ Or if installed via pip:
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><strong>Claude Code (CLI)</strong></summary>
+
+Run:
+
+```bash
+claude mcp add diagrams-mcp -- uvx diagrams-mcp-server
+```
+
+Or add to your `.mcp.json`:
+
+**uvx (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "uvx",
+      "args": ["diagrams-mcp-server"]
+    }
+  }
+}
+```
+
+**pip:**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "diagrams-mcp-server"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Add to your `.cursor/mcp.json`:
+
+**uvx (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "uvx",
+      "args": ["diagrams-mcp-server"]
+    }
+  }
+}
+```
+
+**pip:**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "diagrams-mcp-server"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+Add to your `~/.codeium/windsurf/mcp_config.json`:
+
+**uvx (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "uvx",
+      "args": ["diagrams-mcp-server"]
+    }
+  }
+}
+```
+
+**pip:**
+
+```json
+{
+  "mcpServers": {
+    "diagrams-mcp": {
+      "command": "diagrams-mcp-server"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>VS Code</strong></summary>
+
+Add to your `.vscode/mcp.json`:
+
+**uvx (recommended):**
+
+```json
+{
+  "servers": {
+    "diagrams-mcp": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["diagrams-mcp-server"]
+    }
+  }
+}
+```
+
+**pip:**
+
+```json
+{
+  "servers": {
+    "diagrams-mcp": {
+      "type": "stdio",
+      "command": "diagrams-mcp-server"
+    }
+  }
+}
+```
+
+</details>
 
 ## Available Tools
 

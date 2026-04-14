@@ -218,6 +218,7 @@ def run_cli(
             capture_output=True,
             timeout=timeout,
             env=env,
+            start_new_session=True,
         )
     except subprocess.TimeoutExpired as exc:
         raise ToolError(

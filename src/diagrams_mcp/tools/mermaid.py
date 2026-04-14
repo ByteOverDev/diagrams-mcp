@@ -118,7 +118,6 @@ def render_mermaid(
         image_data = run_cli(cmd, input_data=definition.encode())
         image_result = deliver_image(image_data, filename, download_link, fmt=format)
         metadata = {
-            "diagramCode": definition,
             "diagramType": diagram_type,
             "valid": True,
             "previewLink": preview_link,
@@ -126,7 +125,6 @@ def render_mermaid(
         return [image_result, json.dumps(metadata)]
     except ToolError as exc:
         metadata = {
-            "diagramCode": definition,
             "diagramType": diagram_type,
             "valid": False,
             "error": str(exc),

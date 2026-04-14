@@ -57,24 +57,21 @@ def test_run_code_accepts_valid_filenames():
 def test_run_code_minimal_env():
     """run_code subprocess inherits only minimal environment variables."""
     import json
+    import shutil
 
-    code = "import os, json; print(json.dumps(dict(os.environ)))"
+    # Use __import__ to access os.environ since 'import os' is blocked by the AST check.
+    code = (
+        "import json\n"
+        "_env = __import__('os').environ\n"
+        "json.dump(dict(_env), open('env.json', 'w'))\n"
+    )
     tmpdir = run_code(code)
     try:
-        result_code = "import os, json; json.dump(dict(os.environ), open('env.json','w'))"
-        tmpdir2 = run_code(result_code)
-        try:
-            env = json.loads((tmpdir2 / "env.json").read_text())
-            assert "HOME" in env
-            assert env["HOME"].startswith(tempfile.gettempdir())
-            assert "SECRET_KEY" not in env
-        finally:
-            import shutil
-
-            shutil.rmtree(tmpdir2, ignore_errors=True)
+        env = json.loads((tmpdir / "env.json").read_text())
+        assert "HOME" in env
+        assert env["HOME"].startswith(tempfile.gettempdir())
+        assert "SECRET_KEY" not in env
     finally:
-        import shutil
-
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
@@ -149,6 +146,25 @@ def test_run_code_blocks_dangerous_imports():
         run_code("import ctypes")
 
 
+def test_run_code_blocks_os_import():
+    """run_code rejects code that imports os."""
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import os")
+
+
+def test_run_code_os_not_in_globals():
+    """run_code wrapper removes os from globals so user code cannot access it."""
+    import shutil
+
+    # os is used internally by the wrapper but should be deleted before user code runs.
+    code = "assert 'os' not in dir(), f'os found in globals: {dir()}'; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def test_run_code_allows_diagrams_imports():
     """run_code allows diagrams-related and safe stdlib imports."""
     import shutil
@@ -166,7 +182,7 @@ def test_run_code_allows_safe_stdlib():
     """run_code allows stdlib modules not in the blocked list."""
     import shutil
 
-    code = "import os, json, sys; print('ok')"
+    code = "import json, sys; print('ok')"
     tmpdir = run_code(code)
     try:
         assert tmpdir.is_dir()
@@ -243,6 +259,33 @@ def test_run_code_cpu_limit_kills_tight_loop():
     # so we test that the error propagates correctly
     with pytest.raises(ToolError):
         run_code("while True: pass", timeout=35)
+
+
+@is_linux
+def test_run_code_landlock_blocks_write_outside_tmpdir():
+    """run_code Landlock sandbox blocks writing files outside the tmpdir on Linux."""
+    # Attempt to write to /tmp (outside the sandbox tmpdir).
+    # Landlock should deny this with PermissionError.
+    code = (
+        "_os = __import__('os')\n"
+        "with open('/tmp/landlock_test_escape', 'w') as f:\n"
+        "    f.write('escaped')\n"
+    )
+    with pytest.raises(ToolError, match="PermissionError|Permission denied"):
+        run_code(code)
+
+
+@is_linux
+def test_run_code_landlock_allows_write_in_tmpdir():
+    """run_code Landlock sandbox allows writing inside the tmpdir on Linux."""
+    import shutil
+
+    code = "with open('test_output.txt', 'w') as f: f.write('hello')\nprint('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert (tmpdir / "test_output.txt").read_text() == "hello"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 @is_linux

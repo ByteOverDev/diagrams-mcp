@@ -72,6 +72,15 @@ def _validate_imports(code: str) -> None:
 
 
 _WRAPPER = textwrap.dedent("""\
+    import sys as _sys
+    import resource as _resource
+    _resource.setrlimit(_resource.RLIMIT_CPU, (30, 30))
+    _resource.setrlimit(_resource.RLIMIT_FSIZE, (50_000_000, 50_000_000))
+    if _sys.platform == "linux":
+        _resource.setrlimit(_resource.RLIMIT_NPROC, (50, 50))
+        _resource.setrlimit(_resource.RLIMIT_AS, (512_000_000, 512_000_000))
+    del _resource
+
     import os
     os.chdir({tmpdir!r})
 

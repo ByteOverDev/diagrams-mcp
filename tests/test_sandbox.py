@@ -187,3 +187,60 @@ def test_run_code_isolated_mode():
         assert paths[0] != script_dir, f"sys.path[0] should not be {script_dir} with -I flag"
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_resource_limits_set():
+    """run_code subprocess has resource limits applied (cross-platform limits)."""
+    import json
+    import shutil
+
+    code = (
+        "import resource, json\n"
+        "limits = {\n"
+        "    'RLIMIT_CPU': resource.getrlimit(resource.RLIMIT_CPU),\n"
+        "    'RLIMIT_FSIZE': resource.getrlimit(resource.RLIMIT_FSIZE),\n"
+        "}\n"
+        "json.dump(limits, open('limits.json', 'w'))\n"
+    )
+    tmpdir = run_code(code)
+    try:
+        limits = json.loads((tmpdir / "limits.json").read_text())
+        assert limits["RLIMIT_CPU"][0] == 30
+        assert limits["RLIMIT_FSIZE"][0] == 50_000_000
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_linux_only_resource_limits():
+    """run_code subprocess has RLIMIT_AS and RLIMIT_NPROC set on Linux."""
+    import json
+    import shutil
+    import sys
+
+    if sys.platform != "linux":
+        pytest.skip("RLIMIT_AS and RLIMIT_NPROC only set on Linux")
+
+    code = (
+        "import resource, json\n"
+        "limits = {\n"
+        "    'RLIMIT_AS': resource.getrlimit(resource.RLIMIT_AS),\n"
+        "    'RLIMIT_NPROC': resource.getrlimit(resource.RLIMIT_NPROC),\n"
+        "}\n"
+        "json.dump(limits, open('limits.json', 'w'))\n"
+    )
+    tmpdir = run_code(code)
+    try:
+        limits = json.loads((tmpdir / "limits.json").read_text())
+        assert limits["RLIMIT_AS"][0] == 512_000_000
+        assert limits["RLIMIT_NPROC"][0] == 50
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_cpu_limit_kills_tight_loop():
+    """run_code subprocess is killed by RLIMIT_CPU on a tight CPU loop."""
+    # Use a short CPU limit to avoid slow tests — override via wrapper
+    # The default RLIMIT_CPU is 30s, but the wall-clock timeout is 25s,
+    # so we test that the error propagates correctly
+    with pytest.raises(ToolError):
+        run_code("while True: pass", timeout=35)

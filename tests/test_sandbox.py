@@ -250,8 +250,9 @@ def test_run_code_cpu_limit_kills_tight_loop():
 @is_linux
 def test_run_code_seccomp_blocks_socket_creation():
     """run_code blocks socket creation via seccomp on Linux."""
-    # socket.socket() invokes the socket(2) syscall, which seccomp blocks with EACCES
-    code = "import socket; socket.socket(socket.AF_INET, socket.SOCK_STREAM)"
+    # Use __import__() to bypass the AST import check and test seccomp directly.
+    # socket.socket() invokes the socket(2) syscall, which seccomp blocks with EACCES.
+    code = "s = __import__('socket'); s.socket(s.AF_INET, s.SOCK_STREAM)"
     with pytest.raises(ToolError, match="PermissionError|Permission denied|EACCES"):
         run_code(code)
 

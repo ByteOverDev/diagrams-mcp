@@ -41,6 +41,18 @@ _BLOCKED_MODULES = frozenset(
 )
 
 
+def _blocked_import_name(node: ast.AST) -> str | None:
+    """Return the full dotted name if this AST node imports a blocked module, else None."""
+    if isinstance(node, ast.Import):
+        for alias in node.names:
+            if alias.name.split(".")[0] in _BLOCKED_MODULES:
+                return alias.name
+    elif isinstance(node, ast.ImportFrom) and node.module:
+        if node.module.split(".")[0] in _BLOCKED_MODULES:
+            return node.module
+    return None
+
+
 def _validate_imports(code: str) -> None:
     """Reject code that imports blocked modules.
 
@@ -53,28 +65,18 @@ def _validate_imports(code: str) -> None:
         return  # Let the subprocess report syntax errors with full tracebacks
 
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                top = alias.name.split(".")[0]
-                if top in _BLOCKED_MODULES:
-                    raise ToolError(
-                        f"Import of '{alias.name}' is not allowed in diagram code. "
-                        "Only diagrams-related imports are permitted."
-                    )
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                top = node.module.split(".")[0]
-                if top in _BLOCKED_MODULES:
-                    raise ToolError(
-                        f"Import from '{node.module}' is not allowed in diagram code. "
-                        "Only diagrams-related imports are permitted."
-                    )
+        blocked = _blocked_import_name(node)
+        if blocked:
+            raise ToolError(
+                f"Import of '{blocked}' is not allowed in diagram code. "
+                "Only diagrams-related imports are permitted."
+            )
 
 
 _WRAPPER = textwrap.dedent("""\
     import errno as _errno
     try:
-        import seccomp as _seccomp
+        import pyseccomp as _seccomp
         _f = _seccomp.SyscallFilter(_seccomp.ALLOW)
         for _sc in [
             "socket", "connect", "bind", "listen", "accept", "accept4",

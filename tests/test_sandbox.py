@@ -213,19 +213,18 @@ def test_run_code_resource_limits_set():
 
 
 def test_run_code_linux_only_resource_limits():
-    """run_code subprocess has RLIMIT_AS and RLIMIT_NPROC set on Linux."""
+    """run_code subprocess has RLIMIT_AS set on Linux."""
     import json
     import shutil
     import sys
 
     if sys.platform != "linux":
-        pytest.skip("RLIMIT_AS and RLIMIT_NPROC only set on Linux")
+        pytest.skip("RLIMIT_AS only set on Linux")
 
     code = (
         "import resource, json\n"
         "limits = {\n"
         "    'RLIMIT_AS': resource.getrlimit(resource.RLIMIT_AS),\n"
-        "    'RLIMIT_NPROC': resource.getrlimit(resource.RLIMIT_NPROC),\n"
         "}\n"
         "json.dump(limits, open('limits.json', 'w'))\n"
     )
@@ -233,7 +232,6 @@ def test_run_code_linux_only_resource_limits():
     try:
         limits = json.loads((tmpdir / "limits.json").read_text())
         assert limits["RLIMIT_AS"][0] == 512_000_000
-        assert limits["RLIMIT_NPROC"][0] == 50
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

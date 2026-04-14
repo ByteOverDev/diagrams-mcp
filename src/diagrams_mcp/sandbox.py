@@ -72,6 +72,21 @@ def _validate_imports(code: str) -> None:
 
 
 _WRAPPER = textwrap.dedent("""\
+    import errno as _errno
+    try:
+        import seccomp as _seccomp
+        _f = _seccomp.SyscallFilter(_seccomp.ALLOW)
+        for _sc in [
+            "socket", "connect", "bind", "listen", "accept", "accept4",
+            "sendto", "recvfrom", "sendmsg", "recvmsg", "socketpair",
+        ]:
+            _f.add_rule(_seccomp.ERRNO(_errno.EACCES), _sc)
+        _f.load()
+        del _f, _sc, _seccomp
+    except ImportError:
+        pass
+    del _errno
+
     import sys as _sys
     import resource as _resource
     _resource.setrlimit(_resource.RLIMIT_CPU, (30, 30))

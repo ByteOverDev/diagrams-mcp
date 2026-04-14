@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,3 +14,5 @@ has_plantuml = pytest.mark.skipif(
     shutil.which("java") is None or not _plantuml_jar.is_file(),
     reason="java not installed or plantuml.jar not found",
 )
+
+is_linux = pytest.mark.skipif(sys.platform != "linux", reason="seccomp requires Linux")

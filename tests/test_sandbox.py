@@ -1,6 +1,7 @@
 import tempfile
 
 import pytest
+from conftest import is_linux
 from fastmcp.exceptions import ToolError
 
 from diagrams_mcp.sandbox import run_cli, run_code
@@ -244,3 +245,26 @@ def test_run_code_cpu_limit_kills_tight_loop():
     # so we test that the error propagates correctly
     with pytest.raises(ToolError):
         run_code("while True: pass", timeout=35)
+
+
+@is_linux
+def test_run_code_seccomp_blocks_socket_creation():
+    """run_code blocks socket creation via seccomp on Linux."""
+    # socket.socket() invokes the socket(2) syscall, which seccomp blocks with EACCES
+    code = "import socket; socket.socket(socket.AF_INET, socket.SOCK_STREAM)"
+    with pytest.raises(ToolError, match="PermissionError|Permission denied|EACCES"):
+        run_code(code)
+
+
+@is_linux
+def test_run_code_seccomp_allows_import_without_syscall():
+    """run_code allows importing json module — seccomp only blocks syscalls, not imports."""
+    import shutil
+
+    # import json succeeds because seccomp triggers on syscall invocation, not import
+    code = "import json; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)

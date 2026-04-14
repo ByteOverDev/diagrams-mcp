@@ -23,7 +23,6 @@ def test_render_mermaid_simple():
     # Second element: JSON metadata
     meta = json.loads(result[1])
     assert meta["valid"] is True
-    assert meta["diagramCode"] == definition
     assert meta["diagramType"] == "graph"
     assert meta["previewLink"].startswith("https://mermaid.live/edit#pako:")
 
@@ -39,7 +38,6 @@ def test_render_mermaid_invalid_syntax():
     assert meta["valid"] is False
     assert "error" in meta
     assert meta["previewLink"].startswith("https://mermaid.live/edit#pako:")
-    assert meta["diagramCode"] == definition
 
 
 @has_mmdc

@@ -128,3 +128,62 @@ def test_run_code_graphviz_not_found_stderr():
     with pytest.raises(ToolError, match="failed to execute.*dot") as exc_info:
         run_code(code)
     assert "Diagram code failed" in str(exc_info.value)
+
+
+def test_run_code_blocks_dangerous_imports():
+    """run_code rejects code that imports blocked modules."""
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import socket")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("from urllib.request import urlopen")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import subprocess")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("from http.client import HTTPConnection")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import ctypes")
+
+
+def test_run_code_allows_diagrams_imports():
+    """run_code allows diagrams-related and safe stdlib imports."""
+    import shutil
+
+    # diagrams import (doesn't need graphviz to parse)
+    code = "from diagrams import Diagram; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_allows_safe_stdlib():
+    """run_code allows stdlib modules not in the blocked list."""
+    import shutil
+
+    code = "import os, json, sys; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_isolated_mode():
+    """run_code uses -I flag: script directory is not in sys.path[0]."""
+    import json
+    import shutil
+
+    code = "import sys, json; json.dump(sys.path, open('path.json', 'w'))"
+    tmpdir = run_code(code)
+    try:
+        paths = json.loads((tmpdir / "path.json").read_text())
+        # With -I, sys.path[0] should not be the script's directory
+        script_dir = str(tmpdir)
+        assert paths[0] != script_dir, f"sys.path[0] should not be {script_dir} with -I flag"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)

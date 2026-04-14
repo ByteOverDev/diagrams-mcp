@@ -1,5 +1,6 @@
 """Sandboxed execution of diagram rendering code."""
 
+import ast
 import os
 import re
 import shutil
@@ -12,6 +13,63 @@ from pathlib import Path
 from fastmcp.exceptions import ToolError
 
 _SAFE_FILENAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9 _\-\.]{0,99}$")
+
+_BLOCKED_MODULES = frozenset(
+    {
+        "subprocess",
+        "socket",
+        "http",
+        "urllib",
+        "requests",
+        "httpx",
+        "ctypes",
+        "shutil",
+        "multiprocessing",
+        "signal",
+        "importlib",
+        "code",
+        "codeop",
+        "pty",
+        "pipes",
+        "webbrowser",
+        "ftplib",
+        "smtplib",
+        "ssl",
+        "xmlrpc",
+        "telnetlib",
+    }
+)
+
+
+def _validate_imports(code: str) -> None:
+    """Reject code that imports blocked modules.
+
+    This is a UX layer providing clear error messages — not a security boundary.
+    Seccomp (Linux) is the hard backstop for bypass vectors like __import__().
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return  # Let the subprocess report syntax errors with full tracebacks
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                top = alias.name.split(".")[0]
+                if top in _BLOCKED_MODULES:
+                    raise ToolError(
+                        f"Import of '{alias.name}' is not allowed in diagram code. "
+                        "Only diagrams-related imports are permitted."
+                    )
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                top = node.module.split(".")[0]
+                if top in _BLOCKED_MODULES:
+                    raise ToolError(
+                        f"Import from '{node.module}' is not allowed in diagram code. "
+                        "Only diagrams-related imports are permitted."
+                    )
+
 
 _WRAPPER = textwrap.dedent("""\
     import os
@@ -62,6 +120,8 @@ def run_code(
             "Use only letters, digits, spaces, hyphens, underscores, or dots."
         )
 
+    _validate_imports(code)
+
     tmpdir = tempfile.mkdtemp(prefix="diagrams_mcp_")
     script = _WRAPPER.format(tmpdir=tmpdir, filename=filename, outformat=outformat) + code
     script_path = Path(tmpdir) / "_render.py"
@@ -76,7 +136,7 @@ def run_code(
 
     try:
         result = subprocess.run(
-            [sys.executable, str(script_path)],
+            [sys.executable, "-I", str(script_path)],
             cwd=tmpdir,
             capture_output=True,
             text=True,

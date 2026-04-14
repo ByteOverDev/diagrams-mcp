@@ -218,10 +218,12 @@ _WRAPPER = textwrap.dedent("""\
             )
             try:
                 def _add_path_rule(path, rights):
+                    if not _os.path.isdir(path):
+                        return  # LANDLOCK_RULE_PATH_BENEATH requires a directory fd
                     try:
                         fd = _os.open(path, _os.O_PATH | _os.O_CLOEXEC)
                     except OSError:
-                        return  # path doesn't exist on this system
+                        return  # path doesn't exist or not accessible
                     try:
                         rule = _PathBeneathAttr(allowed_access=rights, parent_fd=fd)
                         _sc(_NR_landlock_add_rule, ruleset_fd,
@@ -235,7 +237,7 @@ _WRAPPER = textwrap.dedent("""\
 
                 # Allow read-only access to system paths (Python, graphviz, libs)
                 for _sp in ["/usr", "/lib", "/lib64", "/etc",
-                            "/proc", "/dev/null", "/dev/urandom"]:
+                            "/proc", "/dev"]:
                     _add_path_rule(_sp, ro_rights)
                 # Allow read-only access to Python's prefix (e.g. /opt, virtualenvs)
                 for _pp in set(_sys.path):

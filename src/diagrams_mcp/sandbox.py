@@ -391,9 +391,7 @@ def run_cli(
         os.killpg(proc.pid, signal.SIGKILL)
         proc.wait()
         shutil.rmtree(tmpdir, ignore_errors=True)
-        raise ToolError(
-            f"Rendering timed out after {timeout:.0f}s. Try simplifying the diagram."
-        )
+        raise ToolError(f"Rendering timed out after {timeout:.0f}s. Try simplifying the diagram.")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 

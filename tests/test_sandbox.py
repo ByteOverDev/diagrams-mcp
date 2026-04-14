@@ -254,11 +254,14 @@ def test_run_code_linux_only_resource_limits():
 
 def test_run_code_cpu_limit_kills_tight_loop():
     """run_code subprocess is killed by RLIMIT_CPU on a tight CPU loop."""
-    # Use a short CPU limit to avoid slow tests — override via wrapper
-    # The default RLIMIT_CPU is 30s, but the wall-clock timeout is 25s,
-    # so we test that the error propagates correctly
-    with pytest.raises(ToolError):
+    # RLIMIT_CPU is 30s; wall-clock timeout is 35s so RLIMIT_CPU fires first.
+    # The process is killed by SIGXCPU/SIGKILL, producing a non-zero exit —
+    # NOT a wall-clock timeout.
+    with pytest.raises(ToolError) as exc_info:
         run_code("while True: pass", timeout=35)
+    msg = str(exc_info.value)
+    assert "Diagram code failed" in msg, f"Expected CPU-limit kill, got: {msg}"
+    assert "timed out" not in msg.lower(), f"Got wall-clock timeout instead of CPU limit: {msg}"
 
 
 @is_linux

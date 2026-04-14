@@ -22,6 +22,7 @@ classifiers = [
 dependencies = [
     "diagrams>=0.23,<1.0",
     "fastmcp==3.2.3",
+    "pyseccomp>=0.1.0; sys_platform == 'linux'",
 ]
 
 [project.scripts]
@@ -47,4 +48,4 @@ select = ["E", "F", "I", "N", "W", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["tests"]
+pythonpath = ["src", "tests"]

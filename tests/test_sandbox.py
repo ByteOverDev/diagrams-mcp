@@ -1,6 +1,7 @@
 import tempfile
 
 import pytest
+from conftest import is_linux
 from fastmcp.exceptions import ToolError
 
 from diagrams_mcp.sandbox import run_cli, run_code
@@ -56,24 +57,21 @@ def test_run_code_accepts_valid_filenames():
 def test_run_code_minimal_env():
     """run_code subprocess inherits only minimal environment variables."""
     import json
+    import shutil
 
-    code = "import os, json; print(json.dumps(dict(os.environ)))"
+    # Use __import__ to access os.environ since 'import os' is blocked by the AST check.
+    code = (
+        "import json\n"
+        "_env = __import__('os').environ\n"
+        "json.dump(dict(_env), open('env.json', 'w'))\n"
+    )
     tmpdir = run_code(code)
     try:
-        result_code = "import os, json; json.dump(dict(os.environ), open('env.json','w'))"
-        tmpdir2 = run_code(result_code)
-        try:
-            env = json.loads((tmpdir2 / "env.json").read_text())
-            assert "HOME" in env
-            assert env["HOME"].startswith(tempfile.gettempdir())
-            assert "SECRET_KEY" not in env
-        finally:
-            import shutil
-
-            shutil.rmtree(tmpdir2, ignore_errors=True)
+        env = json.loads((tmpdir / "env.json").read_text())
+        assert "HOME" in env
+        assert env["HOME"].startswith(tempfile.gettempdir())
+        assert "SECRET_KEY" not in env
     finally:
-        import shutil
-
         shutil.rmtree(tmpdir, ignore_errors=True)
 
 
@@ -128,3 +126,190 @@ def test_run_code_graphviz_not_found_stderr():
     with pytest.raises(ToolError, match="failed to execute.*dot") as exc_info:
         run_code(code)
     assert "Diagram code failed" in str(exc_info.value)
+
+
+def test_run_code_blocks_dangerous_imports():
+    """run_code rejects code that imports blocked modules."""
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import socket")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("from urllib.request import urlopen")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import subprocess")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("from http.client import HTTPConnection")
+
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import ctypes")
+
+
+def test_run_code_blocks_os_import():
+    """run_code rejects code that imports os."""
+    with pytest.raises(ToolError, match="not allowed"):
+        run_code("import os")
+
+
+def test_run_code_os_not_in_globals():
+    """run_code wrapper removes os from globals so user code cannot access it."""
+    import shutil
+
+    # os is used internally by the wrapper but should be deleted before user code runs.
+    code = "assert 'os' not in dir(), f'os found in globals: {dir()}'; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_allows_diagrams_imports():
+    """run_code allows diagrams-related and safe stdlib imports."""
+    import shutil
+
+    # diagrams import (doesn't need graphviz to parse)
+    code = "from diagrams import Diagram; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_allows_safe_stdlib():
+    """run_code allows stdlib modules not in the blocked list."""
+    import shutil
+
+    code = "import json, sys; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_isolated_mode():
+    """run_code uses -I flag: script directory is not in sys.path[0]."""
+    import json
+    import shutil
+
+    code = "import sys, json; json.dump(sys.path, open('path.json', 'w'))"
+    tmpdir = run_code(code)
+    try:
+        paths = json.loads((tmpdir / "path.json").read_text())
+        # With -I, sys.path[0] should not be the script's directory
+        script_dir = str(tmpdir)
+        assert paths[0] != script_dir, f"sys.path[0] should not be {script_dir} with -I flag"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_resource_limits_set():
+    """run_code subprocess has resource limits applied (cross-platform limits)."""
+    import json
+    import shutil
+
+    code = (
+        "import resource, json\n"
+        "limits = {\n"
+        "    'RLIMIT_CPU': resource.getrlimit(resource.RLIMIT_CPU),\n"
+        "    'RLIMIT_FSIZE': resource.getrlimit(resource.RLIMIT_FSIZE),\n"
+        "}\n"
+        "json.dump(limits, open('limits.json', 'w'))\n"
+    )
+    tmpdir = run_code(code)
+    try:
+        limits = json.loads((tmpdir / "limits.json").read_text())
+        assert limits["RLIMIT_CPU"][0] == 30
+        assert limits["RLIMIT_FSIZE"][0] == 50_000_000
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_linux_only_resource_limits():
+    """run_code subprocess has RLIMIT_AS set on Linux."""
+    import json
+    import shutil
+    import sys
+
+    if sys.platform != "linux":
+        pytest.skip("RLIMIT_AS only set on Linux")
+
+    code = (
+        "import resource, json\n"
+        "limits = {\n"
+        "    'RLIMIT_AS': resource.getrlimit(resource.RLIMIT_AS),\n"
+        "}\n"
+        "json.dump(limits, open('limits.json', 'w'))\n"
+    )
+    tmpdir = run_code(code)
+    try:
+        limits = json.loads((tmpdir / "limits.json").read_text())
+        assert limits["RLIMIT_AS"][0] == 512_000_000
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_code_cpu_limit_kills_tight_loop():
+    """run_code subprocess is killed by RLIMIT_CPU on a tight CPU loop."""
+    # RLIMIT_CPU is 30s; wall-clock timeout is 35s so RLIMIT_CPU fires first.
+    # The process is killed by SIGXCPU/SIGKILL, producing a non-zero exit —
+    # NOT a wall-clock timeout.
+    with pytest.raises(ToolError) as exc_info:
+        run_code("while True: pass", timeout=35)
+    msg = str(exc_info.value)
+    assert "Diagram code failed" in msg, f"Expected CPU-limit kill, got: {msg}"
+    assert "timed out" not in msg.lower(), f"Got wall-clock timeout instead of CPU limit: {msg}"
+
+
+@is_linux
+def test_run_code_landlock_blocks_write_outside_tmpdir():
+    """run_code Landlock sandbox blocks writing files outside the tmpdir on Linux."""
+    # Attempt to write to /tmp (outside the sandbox tmpdir).
+    # Landlock should deny this with PermissionError.
+    code = (
+        "_os = __import__('os')\n"
+        "with open('/tmp/landlock_test_escape', 'w') as f:\n"
+        "    f.write('escaped')\n"
+    )
+    with pytest.raises(ToolError, match="PermissionError|Permission denied"):
+        run_code(code)
+
+
+@is_linux
+def test_run_code_landlock_allows_write_in_tmpdir():
+    """run_code Landlock sandbox allows writing inside the tmpdir on Linux."""
+    import shutil
+
+    code = "with open('test_output.txt', 'w') as f: f.write('hello')\nprint('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert (tmpdir / "test_output.txt").read_text() == "hello"
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+@is_linux
+def test_run_code_seccomp_blocks_socket_creation():
+    """run_code blocks socket creation via seccomp on Linux."""
+    # Use __import__() to bypass the AST import check and test seccomp directly.
+    # socket.socket() invokes the socket(2) syscall, which seccomp blocks with EACCES.
+    code = "s = __import__('socket'); s.socket(s.AF_INET, s.SOCK_STREAM)"
+    with pytest.raises(ToolError, match="PermissionError|Permission denied|EACCES"):
+        run_code(code)
+
+
+@is_linux
+def test_run_code_seccomp_allows_import_without_syscall():
+    """run_code allows importing json module — seccomp only blocks syscalls, not imports."""
+    import shutil
+
+    # import json succeeds because seccomp triggers on syscall invocation, not import
+    code = "import json; print('ok')"
+    tmpdir = run_code(code)
+    try:
+        assert tmpdir.is_dir()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)

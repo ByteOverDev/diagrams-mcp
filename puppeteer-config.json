@@ -1,4 +1,4 @@
 {
   "executablePath": "/usr/bin/chromium",
-  "args": ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
+  "args": ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-background-networking"]
 }

@@ -6,6 +6,7 @@ RUN apt-get update \
         graphviz fonts-dejavu-core \
         chromium \
         default-jre-headless \
+        libseccomp2 \
         curl \
         ca-certificates gnupg \
     && rm -rf /var/lib/apt/lists/*

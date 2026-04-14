@@ -45,6 +45,7 @@ def render_plantuml(
         [
             "java",
             "-Djava.awt.headless=true",
+            "-Xmx256m",
             "-DPLANTUML_SECURITY_PROFILE=SANDBOX",
             "-jar",
             _PLANTUML_JAR,

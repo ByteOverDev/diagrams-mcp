@@ -48,6 +48,13 @@ class ImageStore:
         max_total_bytes: int = 200 * 1024 * 1024,  # 200 MB
         max_entry_bytes: int = 10 * 1024 * 1024,  # 10 MB
     ) -> None:
+        for name, value in [
+            ("max_entries", max_entries),
+            ("max_total_bytes", max_total_bytes),
+            ("max_entry_bytes", max_entry_bytes),
+        ]:
+            if value <= 0:
+                raise ValueError(f"{name} must be positive, got {value}")
         self._entries: dict[str, ImageEntry] = {}
         self._lock = threading.Lock()
         self._total_bytes = 0

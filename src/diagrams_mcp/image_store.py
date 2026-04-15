@@ -70,9 +70,14 @@ class ImageStore:
             A URL-safe token string (43 characters, 256 bits of entropy).
 
         Raises:
-            ValueError: If *data* exceeds ``max_entry_bytes``.
+            ValueError: If *data* exceeds ``max_entry_bytes`` or ``max_total_bytes``.
         """
         entry_size = len(data)
+        if entry_size > self.max_total_bytes:
+            raise ValueError(
+                f"Image too large: {entry_size} bytes exceeds"
+                f" {self.max_total_bytes} byte total-store limit"
+            )
         if entry_size > self.max_entry_bytes:
             raise ValueError(
                 f"Image too large: {entry_size} bytes exceeds {self.max_entry_bytes} byte limit"

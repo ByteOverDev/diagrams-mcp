@@ -1,5 +1,7 @@
+import base64
 import re
 import shutil
+import site
 import sys
 from pathlib import Path
 from typing import Literal
@@ -26,6 +28,45 @@ def _graphviz_install_hint() -> str:
         )
     # Linux and other Unix-like
     return "Install with: apt install graphviz (Debian/Ubuntu) or dnf install graphviz (Fedora)"
+
+
+def _find_resources_dir() -> Path | None:
+    """Locate the diagrams 'resources' directory in site-packages."""
+    for sp in site.getsitepackages() + [site.getusersitepackages()]:
+        candidate = Path(sp) / "resources"
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+_RESOURCES_DIR = _find_resources_dir()
+
+_RE_SVG_IMAGE_HREF = re.compile(r'(<image\b[^>]*?xlink:href=")([^"]+\.png)(")')
+
+
+def _embed_svg_images(svg_data: bytes) -> bytes:
+    """Replace local file-path image references in SVG with inline base64 data URIs."""
+    if _RESOURCES_DIR is None:
+        return svg_data
+
+    svg_text = svg_data.decode("utf-8")
+    resources_suffix = "/resources/"
+
+    def _replace_href(match: re.Match) -> str:
+        prefix, href, suffix = match.group(1), match.group(2), match.group(3)
+        # Extract the relative path after "resources/"
+        idx = href.find(resources_suffix)
+        if idx == -1:
+            return match.group(0)
+        rel_path = href[idx + len(resources_suffix) :]
+        local_file = _RESOURCES_DIR / rel_path
+        if not local_file.is_file():
+            return match.group(0)
+        b64 = base64.b64encode(local_file.read_bytes()).decode("ascii")
+        return f"{prefix}data:image/png;base64,{b64}{suffix}"
+
+    result = _RE_SVG_IMAGE_HREF.sub(_replace_href, svg_text)
+    return result.encode("utf-8")
 
 
 _GRAPHVIZ_MISSING_MSG = (
@@ -127,6 +168,8 @@ def render_diagram(
                 "No diagram output produced. Make sure your code uses a `with Diagram(...):` block."
             )
         data = outputs[0].read_bytes()
+        if format == "svg":
+            data = _embed_svg_images(data)
         return deliver_image(data, filename, download_link, fmt=format)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

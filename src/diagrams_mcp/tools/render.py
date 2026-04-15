@@ -59,10 +59,15 @@ def _embed_svg_images(svg_data: bytes) -> bytes:
         if idx == -1:
             return match.group(0)
         rel_path = href[idx + len(resources_suffix) :]
-        local_file = _RESOURCES_DIR / rel_path
-        if not local_file.is_file():
+        try:
+            candidate = (_RESOURCES_DIR / rel_path).resolve()
+            if not candidate.is_relative_to(_RESOURCES_DIR.resolve()):
+                return match.group(0)
+            if not candidate.is_file():
+                return match.group(0)
+            b64 = base64.b64encode(candidate.read_bytes()).decode("ascii")
+        except (OSError, ValueError):
             return match.group(0)
-        b64 = base64.b64encode(local_file.read_bytes()).decode("ascii")
         return f"{prefix}data:image/png;base64,{b64}{suffix}"
 
     result = _RE_SVG_IMAGE_HREF.sub(_replace_href, svg_text)
@@ -169,7 +174,10 @@ def render_diagram(
             )
         data = outputs[0].read_bytes()
         if format == "svg":
-            data = _embed_svg_images(data)
+            try:
+                data = _embed_svg_images(data)
+            except (UnicodeDecodeError, OSError) as exc:
+                raise ToolError(f"Failed to embed SVG images: {exc}") from exc
         return deliver_image(data, filename, download_link, fmt=format)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)

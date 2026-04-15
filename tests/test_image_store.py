@@ -1,7 +1,8 @@
 import pytest
+from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
 
-from diagrams_mcp.image_store import ImageStore, deliver_image
+from diagrams_mcp.image_store import ImageStore, deliver_image, image_store
 
 
 def test_store_and_retrieve():
@@ -134,3 +135,78 @@ def test_deliver_image_rejects_unknown_fmt():
     """deliver_image raises ValueError for an unknown format."""
     with pytest.raises(ValueError, match="Unknown format"):
         deliver_image(b"data", "test", download_link=False, fmt="bmp")
+
+
+# --- Size cap tests ---
+
+
+def test_store_rejects_oversized_entry():
+    """store() raises ValueError when a single entry exceeds max_entry_bytes."""
+    store = ImageStore(max_entry_bytes=100)
+    with pytest.raises(ValueError, match="too large"):
+        store.store(b"x" * 101, "big")
+
+
+def test_store_accepts_entry_at_exact_limit():
+    """store() accepts an entry whose size equals max_entry_bytes."""
+    store = ImageStore(max_entry_bytes=100)
+    token = store.store(b"x" * 100, "exact")
+    assert store.get(token) is not None
+
+
+def test_store_evicts_oldest_when_max_entries_reached():
+    """When max_entries is reached, the entry with earliest expires_at is evicted."""
+    store = ImageStore(max_entries=2, max_total_bytes=10_000_000)
+    t1 = store.store(b"a", "f1", ttl=100)
+    t2 = store.store(b"b", "f2", ttl=200)
+    t3 = store.store(b"c", "f3", ttl=300)  # should evict t1
+    assert store.get(t1) is None
+    assert store.get(t2) is not None
+    assert store.get(t3) is not None
+
+
+def test_store_evicts_to_fit_within_max_total_bytes():
+    """Entries are evicted until total bytes plus new entry fit within max_total_bytes."""
+    store = ImageStore(max_total_bytes=200, max_entry_bytes=200)
+    t1 = store.store(b"x" * 80, "f1", ttl=100)
+    t2 = store.store(b"y" * 80, "f2", ttl=200)
+    # Total is 160. Adding 80 more would be 240 > 200, so t1 is evicted.
+    t3 = store.store(b"z" * 80, "f3", ttl=300)
+    assert store.get(t1) is None
+    assert store.get(t2) is not None
+    assert store.get(t3) is not None
+
+
+def test_total_bytes_updated_on_sweep():
+    """_total_bytes is accurately decremented when expired entries are swept."""
+    store = ImageStore(max_total_bytes=500, max_entry_bytes=500)
+    store.store(b"x" * 100, "expired", ttl=0)
+    # After next store, sweep runs first and frees 100 bytes
+    t2 = store.store(b"y" * 100, "live", ttl=3600)
+    assert store._total_bytes == 100
+    assert store.get(t2) is not None
+
+
+def test_total_bytes_updated_on_lazy_delete():
+    """_total_bytes is decremented when get() lazy-deletes an expired entry."""
+    store = ImageStore()
+    store.store(b"x" * 50, "expired", ttl=0)
+    assert store._total_bytes == 50
+    # get() will lazy-delete the expired entry
+    token = next(iter(store._entries))
+    store.get(token)
+    assert store._total_bytes == 0
+
+
+def test_deliver_image_raises_tool_error_for_oversized(monkeypatch):
+    """deliver_image raises ToolError when image exceeds store's max_entry_bytes."""
+    monkeypatch.setattr(image_store, "max_entry_bytes", 100)
+    with pytest.raises(ToolError, match="too large"):
+        deliver_image(b"x" * 101, "big", download_link=True)
+
+
+def test_deliver_image_inline_unaffected_by_store_limits(monkeypatch):
+    """deliver_image with download_link=False bypasses store limits."""
+    monkeypatch.setattr(image_store, "max_entry_bytes", 10)
+    result = deliver_image(b"x" * 100, "test", download_link=False)
+    assert isinstance(result, Image)

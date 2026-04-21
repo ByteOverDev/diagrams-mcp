@@ -10,7 +10,7 @@ from typing import Literal
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
-from diagrams_mcp.image_store import deliver_image
+from diagrams_mcp.image_store import default_download_link, deliver_image
 from diagrams_mcp.sandbox import run_cli
 
 mermaid = FastMCP("Mermaid")
@@ -88,7 +88,7 @@ def render_mermaid(
     definition: str,
     filename: str = "diagram",
     format: Literal["png", "svg", "pdf"] = "png",
-    download_link: bool = False,
+    download_link: bool | None = None,
 ):
     """Render a Mermaid diagram definition and return the image with metadata.
 
@@ -103,10 +103,15 @@ def render_mermaid(
         definition: Mermaid diagram definition text.
         filename: Output filename without extension.
         format: Output format — ``"png"`` (default), ``"svg"``, or ``"pdf"``.
-        download_link: If True, store the image on the server and return a
-                       temporary download URL path (/images/{token}) instead of
-                       the inline image. The link expires after 15 minutes.
+        download_link: If True, return a temporary download URL path
+                       (/images/{token}) that expires after 15 minutes; if
+                       False, return inline image bytes. Defaults to True
+                       (URL) — set ``DIAGRAMS_INLINE_DEFAULT=true`` on the
+                       server to flip the default. SVG/PDF and PNGs larger
+                       than the inline limit always use a download link.
     """
+    if download_link is None:
+        download_link = default_download_link()
     preview_link = _mermaid_live_url(definition)
     diagram_type = _detect_type(definition)
 

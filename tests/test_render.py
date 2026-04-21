@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from conftest import has_graphviz
 from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import File, Image
+from fastmcp.utilities.types import Image
 
 from diagrams_mcp.tools.render import render_diagram
 
@@ -34,7 +34,7 @@ def test_graphviz_install_hint_per_platform(platform, expected):
 
 @has_graphviz
 def test_render_simple_diagram():
-    """render_diagram returns an Image for a valid diagram."""
+    """render_diagram returns an Image when inline is explicitly requested."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -43,7 +43,7 @@ from diagrams.aws.database import RDS
 with Diagram("Test"):
     EC2("web") >> RDS("db")
 """
-    result = render_diagram(code=code)
+    result = render_diagram(code=code, download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
@@ -83,8 +83,8 @@ with Diagram("Test"):
 
 
 @has_graphviz
-def test_render_default_returns_image():
-    """render_diagram without download_link still returns an Image."""
+def test_render_default_returns_download_link():
+    """Default (no download_link arg) now returns a download URL, not inline bytes."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -93,7 +93,8 @@ with Diagram("Test"):
     EC2("web")
 """
     result = render_diagram(code=code)
-    assert isinstance(result, Image)
+    assert isinstance(result, str)
+    assert "/images/" in result
 
 
 @has_graphviz
@@ -140,8 +141,8 @@ def test_render_general_error_passthrough():
 
 
 @has_graphviz
-def test_render_diagram_svg():
-    """render_diagram with format='svg' returns an SVG Image."""
+def test_render_diagram_svg_always_returns_download_link():
+    """SVG is never inline-decodable by Claude, so it always returns a URL."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -149,15 +150,14 @@ from diagrams.aws.compute import EC2
 with Diagram("Test"):
     EC2("web")
 """
-    result = render_diagram(code=code, format="svg")
-    assert isinstance(result, Image)
-    content = result.to_image_content()
-    assert content.mimeType == "image/svg+xml"
+    result = render_diagram(code=code, format="svg", download_link=False)
+    assert isinstance(result, str)
+    assert "/images/" in result
 
 
 @has_graphviz
-def test_render_diagram_pdf():
-    """render_diagram with format='pdf' returns a File."""
+def test_render_diagram_pdf_always_returns_download_link():
+    """PDF is not an inline image block; always returns a URL."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -165,8 +165,9 @@ from diagrams.aws.compute import EC2
 with Diagram("Test"):
     EC2("web")
 """
-    result = render_diagram(code=code, format="pdf")
-    assert isinstance(result, File)
+    result = render_diagram(code=code, format="pdf", download_link=False)
+    assert isinstance(result, str)
+    assert "/images/" in result
 
 
 @has_graphviz

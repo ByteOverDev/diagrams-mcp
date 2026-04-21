@@ -8,9 +8,9 @@ from diagrams_mcp.tools.plantuml import render_plantuml
 
 @has_plantuml
 def test_render_plantuml_simple():
-    """render_plantuml returns an Image for valid PlantUML syntax."""
+    """render_plantuml returns an Image when inline is explicitly requested."""
     definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
-    result = render_plantuml(definition=definition)
+    result = render_plantuml(definition=definition, download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
@@ -47,18 +47,17 @@ class Car {
 }
 @enduml
 """
-    result = render_plantuml(definition=definition)
+    result = render_plantuml(definition=definition, download_link=False)
     assert isinstance(result, Image)
 
 
 @has_plantuml
-def test_render_plantuml_svg():
-    """render_plantuml with format='svg' returns an SVG Image."""
+def test_render_plantuml_svg_always_returns_download_link():
+    """SVG always auto-promotes to a download link regardless of download_link arg."""
     definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
-    result = render_plantuml(definition=definition, format="svg")
-    assert isinstance(result, Image)
-    content = result.to_image_content()
-    assert content.mimeType == "image/svg+xml"
+    result = render_plantuml(definition=definition, format="svg", download_link=False)
+    assert isinstance(result, str)
+    assert "/images/" in result
 
 
 def test_render_plantuml_pdf_rejected():

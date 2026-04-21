@@ -1,8 +1,17 @@
 import pytest
 from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import File, Image
+from fastmcp.utilities.types import Image
 
-from diagrams_mcp.image_store import ImageStore, deliver_image, image_store
+from diagrams_mcp.image_store import (
+    ANTHROPIC_INLINE_IMAGE_MAX_BYTES,
+    ImageStore,
+    default_download_link,
+    deliver_image,
+    image_store,
+)
+
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+_VALID_PNG = _PNG_MAGIC + b"fake-png-payload"
 
 
 def test_store_and_retrieve():
@@ -66,31 +75,51 @@ def test_multiple_stores_independent():
 
 def test_deliver_image_inline_default_png():
     """deliver_image returns an Image with format=png by default."""
-    result = deliver_image(b"png-bytes", "test", download_link=False)
+    result = deliver_image(_VALID_PNG, "test", download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
 
 
-def test_deliver_image_inline_svg():
-    """deliver_image returns an Image with svg+xml MIME for fmt='svg'."""
+def test_deliver_image_svg_auto_promotes_to_download_link():
+    """SVG can never be an inline image for Claude, so it must be promoted."""
     result = deliver_image(b"<svg></svg>", "test", download_link=False, fmt="svg")
-    assert isinstance(result, Image)
-    content = result.to_image_content()
-    assert content.mimeType == "image/svg+xml"
+    assert isinstance(result, str)
+    assert result.startswith("/images/") or "/images/" in result
 
 
-def test_deliver_image_inline_pdf():
-    """deliver_image returns a File with application/pdf MIME for fmt='pdf'."""
+def test_deliver_image_pdf_auto_promotes_to_download_link():
+    """PDF is not a renderable inline image block, so it must be promoted."""
     result = deliver_image(b"%PDF-1.4 fake", "test", download_link=False, fmt="pdf")
-    assert isinstance(result, File)
+    assert isinstance(result, str)
+    assert "/images/" in result
+
+
+def test_deliver_image_oversized_png_auto_promotes():
+    """PNGs larger than Anthropic's inline cap are promoted to a download link."""
+    big = _PNG_MAGIC + b"x" * (ANTHROPIC_INLINE_IMAGE_MAX_BYTES + 1 - len(_PNG_MAGIC))
+    result = deliver_image(big, "big", download_link=False)
+    assert isinstance(result, str)
+    assert "/images/" in result
+
+
+def test_deliver_image_rejects_malformed_png():
+    """Malformed PNG bytes raise ToolError instead of poisoning the transcript."""
+    with pytest.raises(ToolError, match="malformed"):
+        deliver_image(b"not-a-png", "test", download_link=False)
 
 
 def test_deliver_image_download_link_png():
     """deliver_image returns a /images/ path for download_link=True with default PNG."""
-    result = deliver_image(b"png-bytes", "test", download_link=True)
+    result = deliver_image(_VALID_PNG, "test", download_link=True)
     assert isinstance(result, str)
     assert result.startswith("/images/")
+
+
+def test_deliver_image_download_link_rejects_malformed_png():
+    """Malformed PNG bytes are rejected even on the URL path, so renderer bugs surface early."""
+    with pytest.raises(ToolError, match="malformed"):
+        deliver_image(b"not-a-png", "test", download_link=True)
 
 
 def test_deliver_image_download_link_svg():
@@ -119,7 +148,7 @@ def test_store_preserves_fmt():
 def test_deliver_image_download_link_with_base_url(monkeypatch):
     """deliver_image prepends BASE_URL to download links when set."""
     monkeypatch.setenv("BASE_URL", "https://example.up.railway.app")
-    result = deliver_image(b"png-bytes", "test", download_link=True)
+    result = deliver_image(_VALID_PNG, "test", download_link=True)
     assert isinstance(result, str)
     assert result.startswith("https://example.up.railway.app/images/")
 
@@ -127,7 +156,7 @@ def test_deliver_image_download_link_with_base_url(monkeypatch):
 def test_deliver_image_download_link_base_url_trailing_slash(monkeypatch):
     """deliver_image strips trailing slash from BASE_URL to avoid double slashes."""
     monkeypatch.setenv("BASE_URL", "https://example.up.railway.app/")
-    result = deliver_image(b"png-bytes", "test", download_link=True)
+    result = deliver_image(_VALID_PNG, "test", download_link=True)
     assert "//" not in result.split("://")[1]
 
 
@@ -202,11 +231,31 @@ def test_deliver_image_raises_tool_error_for_oversized(monkeypatch):
     """deliver_image raises ToolError when image exceeds store's max_entry_bytes."""
     monkeypatch.setattr(image_store, "max_entry_bytes", 100)
     with pytest.raises(ToolError, match="too large"):
-        deliver_image(b"x" * 101, "big", download_link=True)
+        deliver_image(_PNG_MAGIC + b"x" * 101, "big", download_link=True)
 
 
-def test_deliver_image_inline_unaffected_by_store_limits(monkeypatch):
-    """deliver_image with download_link=False bypasses store limits."""
+def test_deliver_image_inline_rejects_over_entry_cap(monkeypatch):
+    """Inline delivery is also bounded by max_entry_bytes for a consistent ceiling."""
     monkeypatch.setattr(image_store, "max_entry_bytes", 10)
-    result = deliver_image(b"x" * 100, "test", download_link=False)
-    assert isinstance(result, Image)
+    with pytest.raises(ToolError, match="too large"):
+        deliver_image(_VALID_PNG, "test", download_link=False)
+
+
+# --- DIAGRAMS_INLINE_DEFAULT env var ---
+
+
+def test_default_download_link_defaults_to_true(monkeypatch):
+    monkeypatch.delenv("DIAGRAMS_INLINE_DEFAULT", raising=False)
+    assert default_download_link() is True
+
+
+@pytest.mark.parametrize("value", ["true", "1", "yes", "on", "TRUE", "Yes"])
+def test_default_download_link_env_opts_into_inline(monkeypatch, value):
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", value)
+    assert default_download_link() is False
+
+
+@pytest.mark.parametrize("value", ["false", "0", "no", "", "anything-else"])
+def test_default_download_link_env_falsy_keeps_url_default(monkeypatch, value):
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", value)
+    assert default_download_link() is True

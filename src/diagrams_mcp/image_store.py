@@ -15,6 +15,13 @@ _FORMAT_MAP: dict[str, dict[str, str]] = {
     "pdf": {"mime": "application/pdf", "ext": ".pdf", "image_fmt": "pdf"},
 }
 
+# Anthropic's vision API accepts only PNG/JPEG/GIF/WebP for inline images and
+# rejects payloads larger than ~5 MB. Sending SVG/PDF inline, or oversized PNGs,
+# produces a 400 that poisons the conversation transcript for every follow-up
+# turn — so we transparently promote those to a download link.
+ANTHROPIC_INLINE_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+_PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
 
 @dataclass(slots=True)
 class ImageEntry:
@@ -80,14 +87,14 @@ class ImageStore:
             ValueError: If *data* exceeds ``max_entry_bytes`` or ``max_total_bytes``.
         """
         entry_size = len(data)
+        if entry_size > self.max_entry_bytes:
+            raise ValueError(
+                f"Image too large: {entry_size} bytes exceeds {self.max_entry_bytes} byte limit"
+            )
         if entry_size > self.max_total_bytes:
             raise ValueError(
                 f"Image too large: {entry_size} bytes exceeds"
                 f" {self.max_total_bytes} byte total-store limit"
-            )
-        if entry_size > self.max_entry_bytes:
-            raise ValueError(
-                f"Image too large: {entry_size} bytes exceeds {self.max_entry_bytes} byte limit"
             )
         token = secrets.token_urlsafe(32)
         with self._lock:
@@ -165,6 +172,27 @@ def deliver_image(
     if fmt not in _FORMAT_MAP:
         raise ValueError(f"Unknown format {fmt!r}. Supported: {', '.join(_FORMAT_MAP)}")
 
+    # Validate PNG signature before any delivery decision so renderer bugs
+    # are caught on both the inline and URL paths.
+    if fmt == "png" and not data.startswith(_PNG_MAGIC):
+        raise ToolError("Rendered PNG is malformed (missing PNG signature)")
+
+    # Fail fast with one clear message when the payload can't be delivered by
+    # any path: URLs are bounded by the store's per-entry cap, and inline PNGs
+    # are bounded by Anthropic's 5 MB vision cap.
+    if len(data) > image_store.max_entry_bytes:
+        raise ToolError(
+            f"Rendered {fmt} is too large: {len(data)} bytes exceeds"
+            f" {image_store.max_entry_bytes} byte delivery limit"
+        )
+
+    # Formats Claude's vision API cannot decode inline are always served via
+    # download link, regardless of caller preference.
+    if fmt != "png":
+        download_link = True
+    elif len(data) > ANTHROPIC_INLINE_IMAGE_MAX_BYTES:
+        download_link = True
+
     if download_link:
         try:
             token = image_store.store(data, filename, fmt=fmt)
@@ -172,9 +200,6 @@ def deliver_image(
             raise ToolError(str(exc)) from exc
         base_url = os.environ.get("BASE_URL", "").rstrip("/")
         return f"{base_url}/images/{token}"
-
-    if fmt == "pdf":
-        return File(data=data, format="pdf")
 
     image_fmt = _FORMAT_MAP[fmt]["image_fmt"]
     return Image(data=data, format=image_fmt)

@@ -52,6 +52,25 @@ class Car {
 
 
 @has_plantuml
+@pytest.mark.parametrize(
+    "env_value,expected_type",
+    [
+        ("", str),          # unset-like → URL default
+        ("false", str),     # explicit false → URL default
+        ("true", Image),    # explicit true → inline PNG
+    ],
+)
+def test_render_plantuml_default_respects_inline_env(monkeypatch, env_value, expected_type):
+    """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
+    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
+    result = render_plantuml(definition=definition)
+    assert isinstance(result, expected_type)
+    if expected_type is str:
+        assert result.startswith("/images/")
+
+
+@has_plantuml
 def test_render_plantuml_svg_always_returns_download_link():
     """SVG always auto-promotes to a download link regardless of download_link arg."""
     definition = "@startuml\nAlice -> Bob: Hello\n@enduml"

@@ -83,8 +83,17 @@ with Diagram("Test"):
 
 
 @has_graphviz
-def test_render_default_returns_download_link():
-    """Default (no download_link arg) now returns a download URL, not inline bytes."""
+@pytest.mark.parametrize(
+    "env_value,expected_type",
+    [
+        ("", str),          # unset-like → URL default
+        ("false", str),     # explicit false → URL default
+        ("true", Image),    # explicit true → inline PNG
+    ],
+)
+def test_render_default_respects_inline_env(monkeypatch, env_value, expected_type):
+    """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -93,8 +102,9 @@ with Diagram("Test"):
     EC2("web")
 """
     result = render_diagram(code=code)
-    assert isinstance(result, str)
-    assert "/images/" in result
+    assert isinstance(result, expected_type)
+    if expected_type is str:
+        assert "/images/" in result
 
 
 @has_graphviz

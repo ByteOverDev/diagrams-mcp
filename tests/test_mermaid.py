@@ -2,6 +2,7 @@ import base64
 import json
 import zlib
 
+import pytest
 from conftest import has_mmdc
 from fastmcp.utilities.types import Image
 
@@ -12,7 +13,7 @@ from diagrams_mcp.tools.mermaid import _detect_type, _mermaid_live_url, render_m
 def test_render_mermaid_simple():
     """render_mermaid returns [Image(png), json_metadata] for valid Mermaid syntax."""
     definition = "graph TD;\n    A-->B;\n    B-->C;"
-    result = render_mermaid(definition=definition)
+    result = render_mermaid(definition=definition, download_link=False)
     assert isinstance(result, list)
     assert len(result) == 2
     # First element: PNG image (default format)
@@ -66,7 +67,7 @@ sequenceDiagram
     Alice->>Bob: Hello Bob
     Bob-->>Alice: Hi Alice
 """
-    result = render_mermaid(definition=definition)
+    result = render_mermaid(definition=definition, download_link=False)
     assert isinstance(result, list)
     assert len(result) == 2
     assert isinstance(result[0], Image)
@@ -219,7 +220,7 @@ def test_detect_type_packet_beta():
 def test_render_mermaid_svg():
     """render_mermaid with format='svg' returns SVG Image."""
     definition = "graph TD;\n    A-->B;"
-    result = render_mermaid(definition=definition, format="svg")
+    result = render_mermaid(definition=definition, format="svg", download_link=False)
     assert isinstance(result, list)
     assert len(result) == 2
     assert isinstance(result[0], Image)
@@ -233,10 +234,31 @@ def test_render_mermaid_pdf():
     from fastmcp.utilities.types import File
 
     definition = "graph TD;\n    A-->B;"
-    result = render_mermaid(definition=definition, format="pdf")
+    result = render_mermaid(definition=definition, format="pdf", download_link=False)
     assert isinstance(result, list)
     assert len(result) == 2
     assert isinstance(result[0], File)
+
+
+@has_mmdc
+@pytest.mark.parametrize(
+    "env_value,expected_first_type",
+    [
+        ("", str),  # unset-like → URL default
+        ("false", str),  # explicit false → URL default
+        ("true", Image),  # explicit true → inline PNG
+    ],
+)
+def test_render_mermaid_default_respects_inline_env(monkeypatch, env_value, expected_first_type):
+    """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], expected_first_type)
+    if expected_first_type is str:
+        assert result[0].startswith("/images/")
 
 
 @has_mmdc

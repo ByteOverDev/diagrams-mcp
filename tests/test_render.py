@@ -34,7 +34,7 @@ def test_graphviz_install_hint_per_platform(platform, expected):
 
 @has_graphviz
 def test_render_simple_diagram():
-    """render_diagram returns an Image for a valid diagram."""
+    """render_diagram returns an Image when inline is explicitly requested."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -43,7 +43,7 @@ from diagrams.aws.database import RDS
 with Diagram("Test"):
     EC2("web") >> RDS("db")
 """
-    result = render_diagram(code=code)
+    result = render_diagram(code=code, download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
@@ -83,8 +83,17 @@ with Diagram("Test"):
 
 
 @has_graphviz
-def test_render_default_returns_image():
-    """render_diagram without download_link still returns an Image."""
+@pytest.mark.parametrize(
+    "env_value,expected_type",
+    [
+        ("", str),  # unset-like → URL default
+        ("false", str),  # explicit false → URL default
+        ("true", Image),  # explicit true → inline PNG
+    ],
+)
+def test_render_default_respects_inline_env(monkeypatch, env_value, expected_type):
+    """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -93,7 +102,9 @@ with Diagram("Test"):
     EC2("web")
 """
     result = render_diagram(code=code)
-    assert isinstance(result, Image)
+    assert isinstance(result, expected_type)
+    if expected_type is str:
+        assert "/images/" in result
 
 
 @has_graphviz
@@ -149,7 +160,7 @@ from diagrams.aws.compute import EC2
 with Diagram("Test"):
     EC2("web")
 """
-    result = render_diagram(code=code, format="svg")
+    result = render_diagram(code=code, format="svg", download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/svg+xml"
@@ -165,7 +176,7 @@ from diagrams.aws.compute import EC2
 with Diagram("Test"):
     EC2("web")
 """
-    result = render_diagram(code=code, format="pdf")
+    result = render_diagram(code=code, format="pdf", download_link=False)
     assert isinstance(result, File)
 
 

@@ -8,9 +8,9 @@ from diagrams_mcp.tools.plantuml import render_plantuml
 
 @has_plantuml
 def test_render_plantuml_simple():
-    """render_plantuml returns an Image for valid PlantUML syntax."""
+    """render_plantuml returns an Image when inline is explicitly requested."""
     definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
-    result = render_plantuml(definition=definition)
+    result = render_plantuml(definition=definition, download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
@@ -47,7 +47,7 @@ class Car {
 }
 @enduml
 """
-    result = render_plantuml(definition=definition)
+    result = render_plantuml(definition=definition, download_link=False)
     assert isinstance(result, Image)
 
 
@@ -55,10 +55,29 @@ class Car {
 def test_render_plantuml_svg():
     """render_plantuml with format='svg' returns an SVG Image."""
     definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
-    result = render_plantuml(definition=definition, format="svg")
+    result = render_plantuml(definition=definition, format="svg", download_link=False)
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/svg+xml"
+
+
+@has_plantuml
+@pytest.mark.parametrize(
+    "env_value,expected_type",
+    [
+        ("", str),  # unset-like → URL default
+        ("false", str),  # explicit false → URL default
+        ("true", Image),  # explicit true → inline PNG
+    ],
+)
+def test_render_plantuml_default_respects_inline_env(monkeypatch, env_value, expected_type):
+    """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
+    monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
+    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
+    result = render_plantuml(definition=definition)
+    assert isinstance(result, expected_type)
+    if expected_type is str:
+        assert result.startswith("/images/")
 
 
 def test_render_plantuml_pdf_rejected():

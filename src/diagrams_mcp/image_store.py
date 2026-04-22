@@ -139,6 +139,19 @@ class ImageStore:
 image_store = ImageStore()
 
 
+def default_download_link() -> bool:
+    """Default value for each render tool's ``download_link`` parameter.
+
+    URLs work in every MCP client and never poison the transcript when a
+    payload can't be decoded, so they are the default. Set
+    ``DIAGRAMS_INLINE_DEFAULT=true`` (or ``1``/``yes``) to flip back to
+    inline bytes for clients that prefer them.
+    """
+    flag = os.environ.get("DIAGRAMS_INLINE_DEFAULT", "").strip().lower()
+    inline = flag in ("1", "true", "yes", "on")
+    return not inline
+
+
 def deliver_image(
     data: bytes,
     filename: str,

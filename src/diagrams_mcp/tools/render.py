@@ -10,7 +10,7 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
 
-from diagrams_mcp.image_store import deliver_image
+from diagrams_mcp.image_store import default_download_link, deliver_image
 from diagrams_mcp.sandbox import run_code
 from diagrams_mcp.tools.discovery import _get_node_index
 
@@ -141,7 +141,7 @@ def render_diagram(
     code: str,
     filename: str = "diagram",
     format: Literal["png", "svg", "pdf"] = "png",
-    download_link: bool = False,
+    download_link: bool | None = None,
 ) -> Image | File | str:
     """Render a mingrammer/diagrams Python snippet to PNG and return the image.
 
@@ -156,10 +156,15 @@ def render_diagram(
         code: Full Python code using the diagrams library.
         filename: Output filename without extension.
         format: Output format — ``"png"`` (default), ``"svg"``, or ``"pdf"``.
-        download_link: If True, store the image on the server and return a
-                       temporary download URL path (/images/{token}) instead of
-                       the inline image. The link expires after 15 minutes.
+        download_link: If True, return a temporary download URL path
+                       (/images/{token}) that expires after 15 minutes; if
+                       False, return inline image bytes. Defaults to True
+                       (URL) — set ``DIAGRAMS_INLINE_DEFAULT=true`` on the
+                       server to flip the default. SVG/PDF and PNGs larger
+                       than the inline limit always use a download link.
     """
+    if download_link is None:
+        download_link = default_download_link()
     if not _graphviz_available:
         raise ToolError(_GRAPHVIZ_MISSING_MSG)
     try:

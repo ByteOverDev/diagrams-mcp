@@ -11,7 +11,7 @@ from diagrams_mcp.tools.mermaid import _detect_type, _mermaid_live_url, render_m
 
 @has_mmdc
 def test_render_mermaid_simple():
-    """render_mermaid returns [Image(png), json_metadata] when inline is requested."""
+    """render_mermaid returns [Image(png), json_metadata] for valid Mermaid syntax."""
     definition = "graph TD;\n    A-->B;\n    B-->C;"
     result = render_mermaid(definition=definition, download_link=False)
     assert isinstance(result, list)
@@ -217,6 +217,30 @@ def test_detect_type_packet_beta():
 
 
 @has_mmdc
+def test_render_mermaid_svg():
+    """render_mermaid with format='svg' returns SVG Image."""
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition, format="svg", download_link=False)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], Image)
+    content = result[0].to_image_content()
+    assert content.mimeType == "image/svg+xml"
+
+
+@has_mmdc
+def test_render_mermaid_pdf():
+    """render_mermaid with format='pdf' returns PDF File in result list."""
+    from fastmcp.utilities.types import File
+
+    definition = "graph TD;\n    A-->B;"
+    result = render_mermaid(definition=definition, format="pdf", download_link=False)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert isinstance(result[0], File)
+
+
+@has_mmdc
 @pytest.mark.parametrize(
     "env_value,expected_first_type",
     [
@@ -235,28 +259,6 @@ def test_render_mermaid_default_respects_inline_env(monkeypatch, env_value, expe
     assert isinstance(result[0], expected_first_type)
     if expected_first_type is str:
         assert result[0].startswith("/images/")
-
-
-@has_mmdc
-def test_render_mermaid_svg_always_returns_download_link():
-    """SVG always auto-promotes to a download link regardless of download_link arg."""
-    definition = "graph TD;\n    A-->B;"
-    result = render_mermaid(definition=definition, format="svg", download_link=False)
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert isinstance(result[0], str)
-    assert "/images/" in result[0]
-
-
-@has_mmdc
-def test_render_mermaid_pdf_always_returns_download_link():
-    """PDF always auto-promotes to a download link."""
-    definition = "graph TD;\n    A-->B;"
-    result = render_mermaid(definition=definition, format="pdf", download_link=False)
-    assert isinstance(result, list)
-    assert len(result) == 2
-    assert isinstance(result[0], str)
-    assert "/images/" in result[0]
 
 
 @has_mmdc

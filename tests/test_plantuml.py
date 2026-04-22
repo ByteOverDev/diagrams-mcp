@@ -52,6 +52,16 @@ class Car {
 
 
 @has_plantuml
+def test_render_plantuml_svg():
+    """render_plantuml with format='svg' returns an SVG Image."""
+    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
+    result = render_plantuml(definition=definition, format="svg", download_link=False)
+    assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/svg+xml"
+
+
+@has_plantuml
 @pytest.mark.parametrize(
     "env_value,expected_type",
     [
@@ -68,15 +78,6 @@ def test_render_plantuml_default_respects_inline_env(monkeypatch, env_value, exp
     assert isinstance(result, expected_type)
     if expected_type is str:
         assert result.startswith("/images/")
-
-
-@has_plantuml
-def test_render_plantuml_svg_always_returns_download_link():
-    """SVG always auto-promotes to a download link regardless of download_link arg."""
-    definition = "@startuml\nAlice -> Bob: Hello\n@enduml"
-    result = render_plantuml(definition=definition, format="svg", download_link=False)
-    assert isinstance(result, str)
-    assert "/images/" in result
 
 
 def test_render_plantuml_pdf_rejected():

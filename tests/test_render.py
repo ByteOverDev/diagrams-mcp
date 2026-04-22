@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 from conftest import has_graphviz
 from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import Image
+from fastmcp.utilities.types import File, Image
 
 from diagrams_mcp.tools.render import render_diagram
 
@@ -151,8 +151,8 @@ def test_render_general_error_passthrough():
 
 
 @has_graphviz
-def test_render_diagram_svg_always_returns_download_link():
-    """SVG is never inline-decodable by Claude, so it always returns a URL."""
+def test_render_diagram_svg():
+    """render_diagram with format='svg' returns an SVG Image."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -161,13 +161,14 @@ with Diagram("Test"):
     EC2("web")
 """
     result = render_diagram(code=code, format="svg", download_link=False)
-    assert isinstance(result, str)
-    assert "/images/" in result
+    assert isinstance(result, Image)
+    content = result.to_image_content()
+    assert content.mimeType == "image/svg+xml"
 
 
 @has_graphviz
-def test_render_diagram_pdf_always_returns_download_link():
-    """PDF is not an inline image block; always returns a URL."""
+def test_render_diagram_pdf():
+    """render_diagram with format='pdf' returns a File."""
     code = """\
 from diagrams import Diagram
 from diagrams.aws.compute import EC2
@@ -176,8 +177,7 @@ with Diagram("Test"):
     EC2("web")
 """
     result = render_diagram(code=code, format="pdf", download_link=False)
-    assert isinstance(result, str)
-    assert "/images/" in result
+    assert isinstance(result, File)
 
 
 @has_graphviz

@@ -86,9 +86,9 @@ with Diagram("Test"):
 @pytest.mark.parametrize(
     "env_value,expected_type",
     [
-        ("", str),          # unset-like → URL default
-        ("false", str),     # explicit false → URL default
-        ("true", Image),    # explicit true → inline PNG
+        ("", str),  # unset-like → URL default
+        ("false", str),  # explicit false → URL default
+        ("true", Image),  # explicit true → inline PNG
     ],
 )
 def test_render_default_respects_inline_env(monkeypatch, env_value, expected_type):

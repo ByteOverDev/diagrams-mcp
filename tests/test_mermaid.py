@@ -220,14 +220,12 @@ def test_detect_type_packet_beta():
 @pytest.mark.parametrize(
     "env_value,expected_first_type",
     [
-        ("", str),          # unset-like → URL default
-        ("false", str),     # explicit false → URL default
-        ("true", Image),    # explicit true → inline PNG
+        ("", str),  # unset-like → URL default
+        ("false", str),  # explicit false → URL default
+        ("true", Image),  # explicit true → inline PNG
     ],
 )
-def test_render_mermaid_default_respects_inline_env(
-    monkeypatch, env_value, expected_first_type
-):
+def test_render_mermaid_default_respects_inline_env(monkeypatch, env_value, expected_first_type):
     """Omitted download_link resolves via DIAGRAMS_INLINE_DEFAULT deterministically."""
     monkeypatch.setenv("DIAGRAMS_INLINE_DEFAULT", env_value)
     definition = "graph TD;\n    A-->B;"

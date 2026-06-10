@@ -21,7 +21,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PNPM_HOME=/usr/local/share/pnpm
-ENV PATH="$PNPM_HOME:$PATH"
+# pnpm (via Corepack) installs global binaries into $PNPM_HOME/bin, so that
+# directory — not just $PNPM_HOME — must be on PATH for `mmdc` to be found.
+ENV PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 RUN pnpm install -g @mermaid-js/mermaid-cli \
     && mmdc --version
 

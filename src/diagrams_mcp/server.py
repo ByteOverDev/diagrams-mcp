@@ -98,7 +98,13 @@ def _sanitize_filename(name: str) -> str:
 
 
 def main():
-    mcp.run()
+    # stateless_http=True: do not retain per-session transports in memory.
+    # FastMCP's streamable-HTTP transport keeps a session object per client in
+    # memory by default; on a long-lived public deployment those accumulate and
+    # are only freed on restart (observed as a steady RSS climb -> OOM restart).
+    # None of these tools use stateful features (elicitation/sampling), so a
+    # fresh transport per request is correct and bounds memory.
+    mcp.run(stateless_http=True)
 
 
 if __name__ == "__main__":

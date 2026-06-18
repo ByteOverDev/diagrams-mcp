@@ -2,7 +2,6 @@
 
 import base64
 import json
-import os
 import re
 import zlib
 from typing import Literal
@@ -11,11 +10,9 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
 from diagrams_mcp.image_store import default_download_link, deliver_image
-from diagrams_mcp.sandbox import run_cli
+from diagrams_mcp.renderer import RenderRequest, get_renderer
 
 mermaid = FastMCP("Mermaid")
-
-_PUPPETEER_CONFIG = os.environ.get("MERMAID_PUPPETEER_CONFIG", "/etc/mermaid/puppeteer-config.json")
 
 _DIAGRAM_TYPES = {
     "flowchart": re.compile(r"^\s*flowchart\b"),
@@ -115,13 +112,11 @@ def render_mermaid(
     preview_link = _mermaid_live_url(definition)
     diagram_type = _detect_type(definition)
 
-    cmd = ["mmdc", "-i", "-", "-o", "-", "-e", format]
-    if os.path.isfile(_PUPPETEER_CONFIG):
-        cmd.extend(["-p", _PUPPETEER_CONFIG])
-
     try:
-        image_data = run_cli(cmd, input_data=definition.encode())
-        image_result = deliver_image(image_data, filename, download_link, fmt=format)
+        result = get_renderer().render(
+            RenderRequest(kind="mermaid", source=definition, filename=filename, format=format)
+        )
+        image_result = deliver_image(result.data, filename, download_link, fmt=format)
         metadata = {
             "diagramType": diagram_type,
             "valid": True,

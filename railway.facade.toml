@@ -1,6 +1,6 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+dockerfilePath = "Dockerfile.facade"
 
 [deploy]
 startCommand = "sh -c 'FASTMCP_PORT=$PORT diagrams-mcp-server'"

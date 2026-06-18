@@ -1,10 +1,12 @@
 import base64
+import socket
 
+import pytest
 from fastmcp.exceptions import ToolError
 from starlette.testclient import TestClient
 
 from diagrams_mcp.renderer import RemoteRenderer, RenderRequest, RenderResult, render_from_payload
-from diagrams_mcp.renderer_service import app
+from diagrams_mcp.renderer_service import _bind_dual_stack_sockets, app
 
 _PNG = b"\x89PNG\r\n\x1a\nfake"
 
@@ -28,6 +30,19 @@ def test_renderer_service_returns_structured_render_error():
         response = client.post("/render", json={})
     assert response.status_code == 400
     assert response.json()["ok"] is False
+
+
+def test_renderer_service_can_bind_ipv4_and_ipv6():
+    try:
+        sockets = _bind_dual_stack_sockets(0)
+    except OSError as exc:
+        pytest.skip(f"dual-stack bind unavailable: {exc}")
+    try:
+        assert {sock.family for sock in sockets} == {socket.AF_INET, socket.AF_INET6}
+        assert len({sock.getsockname()[1] for sock in sockets}) == 1
+    finally:
+        for sock in sockets:
+            sock.close()
 
 
 def test_remote_renderer_decodes_success(monkeypatch):

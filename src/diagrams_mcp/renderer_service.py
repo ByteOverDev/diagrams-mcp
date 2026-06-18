@@ -1,6 +1,7 @@
 """HTTP service entry point for the separated renderer."""
 
 import os
+import socket
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -33,7 +34,38 @@ def main() -> None:
 
     host = os.environ.get("RENDERER_HOST", "::")
     port = int(os.environ.get("PORT", os.environ.get("RENDERER_PORT", "8001")))
+    if host == "::":
+        sockets = _bind_dual_stack_sockets(port)
+        config = uvicorn.Config(app, host=host, port=port)
+        server = uvicorn.Server(config)
+        server.run(sockets=sockets)
+        return
     uvicorn.run(app, host=host, port=port)
+
+
+def _bind_dual_stack_sockets(port: int) -> list[socket.socket]:
+    """Bind IPv6 for Railway private DNS and IPv4 for platform healthchecks."""
+    sockets: list[socket.socket] = []
+    try:
+        ipv6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        ipv6.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if hasattr(socket, "IPV6_V6ONLY"):
+            ipv6.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        ipv6.bind(("::", port))
+        ipv6.listen()
+        sockets.append(ipv6)
+
+        bound_port = ipv6.getsockname()[1]
+        ipv4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ipv4.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        ipv4.bind(("0.0.0.0", bound_port))
+        ipv4.listen()
+        sockets.append(ipv4)
+    except Exception:
+        for sock in sockets:
+            sock.close()
+        raise
+    return sockets
 
 
 if __name__ == "__main__":

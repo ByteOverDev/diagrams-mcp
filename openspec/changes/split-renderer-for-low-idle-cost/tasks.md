@@ -47,7 +47,15 @@
 
 - [x] 7.1 Run the full test suite and lint/format checks.
 - [x] 7.2 Deploy the split architecture to a non-production or preview environment if available.
-- [ ] 7.3 Validate discovery and reference tools with the renderer unavailable.
+- [x] 7.3 Validate discovery and reference tools with the renderer unavailable.
 - [x] 7.4 Validate each render engine through the facade using remote renderer mode.
 - [x] 7.5 Compare post-split facade idle memory against the pre-split 0.69 GB baseline and the target threshold.
-- [ ] 7.6 Promote to production only after client-facing render behavior and output delivery compatibility are verified.
+- [x] 7.6 Promote to production only after client-facing render behavior and output delivery compatibility are verified.
+
+Production validation notes, 2026-06-18:
+- Split production facade: `https://diagrams-mcp-facade-production-8fff.up.railway.app`.
+- Verified MCP tool listing includes `list_providers`, `render_diagram`, `render_mermaid`, and `render_plantuml`.
+- Verified `render_diagram`, `render_mermaid`, and `render_plantuml` through the facade using the remote renderer.
+- Verified returned `/images/{token}` links respond `200` with `image/png` content.
+- Verified discovery still works with `DIAGRAMS_RENDERER_URL` pointed at an unavailable endpoint.
+- Current memory: old `diagrams-mcp` ~0.69 GB; split facade ~0.067 GB current / ~0.133 GB peak; renderer ~0.064 GB current / ~0.184 GB peak.

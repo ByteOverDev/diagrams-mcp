@@ -31,7 +31,7 @@ app = Starlette(
 def main() -> None:
     import uvicorn
 
-    host = os.environ.get("RENDERER_HOST", "0.0.0.0")
+    host = os.environ.get("RENDERER_HOST", "::")
     port = int(os.environ.get("PORT", os.environ.get("RENDERER_PORT", "8001")))
     uvicorn.run(app, host=host, port=port)
 

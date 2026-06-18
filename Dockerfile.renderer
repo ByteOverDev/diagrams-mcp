@@ -39,4 +39,6 @@ RUN pip install --no-cache-dir .
 
 USER appuser
 
+ENV RENDERER_HOST=::
+
 CMD ["sh", "-c", "RENDERER_PORT=${PORT:-8001} diagrams-renderer-server"]

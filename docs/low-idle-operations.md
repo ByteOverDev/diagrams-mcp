@@ -36,7 +36,8 @@ The facade supports two renderer modes:
 `DIAGRAMS_RENDERER_URL` may be either a full URL such as
 `http://diagrams-renderer.railway.internal:8080` or a Railway private domain
 such as `diagrams-renderer.railway.internal`; schemeless values are normalized
-to `http://...` by the facade.
+to `http://...` by the facade. Portless `*.railway.internal` values are
+normalized to port `8080`.
 
 On Railway, the renderer should bind to IPv6 for private networking:
 `RENDERER_HOST=:: RENDERER_PORT=$PORT diagrams-renderer-server`.

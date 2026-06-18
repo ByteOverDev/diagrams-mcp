@@ -12,6 +12,7 @@ import site
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,6 +166,7 @@ class RemoteRenderer(BaseRenderer):
     def __init__(self, base_url: str, *, timeout: float = 30.0) -> None:
         if "://" not in base_url:
             base_url = f"http://{base_url}"
+        base_url = _normalize_renderer_url(base_url)
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
@@ -241,6 +243,21 @@ def get_renderer() -> BaseRenderer:
             raise ToolError("DIAGRAMS_RENDERER_URL is required when DIAGRAMS_RENDERER_MODE=remote")
         return RemoteRenderer(url)
     return InProcessRenderer()
+
+
+def _normalize_renderer_url(base_url: str) -> str:
+    parsed = urllib.parse.urlsplit(base_url)
+    if parsed.hostname and parsed.hostname.endswith(".railway.internal") and parsed.port is None:
+        netloc = f"{parsed.hostname}:8080"
+        if parsed.username:
+            auth = parsed.username
+            if parsed.password:
+                auth = f"{auth}:{parsed.password}"
+            netloc = f"{auth}@{netloc}"
+        return urllib.parse.urlunsplit(
+            (parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment)
+        )
+    return base_url
 
 
 def _request_to_payload(request: RenderRequest) -> dict[str, str]:

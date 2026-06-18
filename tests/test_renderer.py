@@ -5,7 +5,12 @@ import pytest
 from fastmcp.exceptions import ToolError
 from starlette.testclient import TestClient
 
-from diagrams_mcp.renderer import RemoteRenderer, RenderRequest, RenderResult, render_from_payload
+from diagrams_mcp.renderer import (
+    RemoteRenderer,
+    RenderRequest,
+    RenderResult,
+    render_from_payload,
+)
 from diagrams_mcp.renderer_service import _bind_dual_stack_sockets, app
 
 _PNG = b"\x89PNG\r\n\x1a\nfake"
@@ -62,6 +67,16 @@ def test_remote_renderer_decodes_success(monkeypatch):
     )
     assert result.data == _PNG
     assert result.format == "png"
+
+
+def test_remote_renderer_normalizes_railway_private_domain_port():
+    renderer = RemoteRenderer("diagrams-renderer.railway.internal")
+    assert renderer.base_url == "http://diagrams-renderer.railway.internal:8080"
+
+
+def test_remote_renderer_preserves_explicit_port():
+    renderer = RemoteRenderer("diagrams-renderer.railway.internal:9000")
+    assert renderer.base_url == "http://diagrams-renderer.railway.internal:9000"
 
 
 def test_remote_renderer_raises_tool_error_on_error_response(monkeypatch):

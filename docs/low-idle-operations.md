@@ -38,6 +38,9 @@ The facade supports two renderer modes:
 such as `diagrams-renderer.railway.internal`; schemeless values are normalized
 to `http://...` by the facade.
 
+On Railway, the renderer should bind to IPv6 for private networking:
+`RENDERER_HOST=:: RENDERER_PORT=$PORT diagrams-renderer-server`.
+
 Temporary output delivery supports two stores:
 
 | Store | Environment | Behavior |

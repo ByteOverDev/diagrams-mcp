@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile.renderer"
 
 [deploy]
-startCommand = "sh -c 'RENDERER_PORT=$PORT diagrams-renderer-server'"
+startCommand = "sh -c 'RENDERER_HOST=:: RENDERER_PORT=$PORT diagrams-renderer-server'"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"

@@ -110,7 +110,7 @@ Add to your `.vscode/mcp.json`:
 
 #### Prerequisites
 
-Graphviz is required for the core diagram rendering engine. Mermaid CLI and PlantUML are optional — install them only if you need those specific rendering engines.
+Graphviz is required for the default local/in-process rendering mode. Mermaid CLI and PlantUML are optional — install them only if you need those specific rendering engines locally.
 
 | Dependency | Required for | Install |
 |---|---|---|
@@ -118,7 +118,7 @@ Graphviz is required for the core diagram rendering engine. Mermaid CLI and Plan
 | [Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) | `render_mermaid` (flowcharts, sequence, etc.) | `npm install -g @mermaid-js/mermaid-cli` |
 | [Java](https://openjdk.org/) + [PlantUML](https://plantuml.com/) | `render_plantuml` (UML diagrams) | `brew install openjdk` + download [plantuml.jar](https://github.com/plantuml/plantuml/releases) |
 
-> **Note**: The hosted server has all dependencies pre-installed. Local prerequisites only apply if you're running the server yourself.
+> **Note**: The hosted server runs as a slim MCP facade plus a separate renderer service, and has all render dependencies pre-installed in the renderer. Local prerequisites only apply if you're running in-process rendering yourself.
 
 #### Install the server
 
@@ -408,6 +408,41 @@ ruff format .
 # Run the MCP server locally (stdio mode)
 diagrams-mcp-server
 ```
+
+### Split Facade/Renderer Mode
+
+For hosted deployments, the MCP server can run as a lightweight facade that delegates render work to a separate renderer service. This keeps the always-on MCP process small while Graphviz, Chromium, Mermaid CLI, Java, and PlantUML live only in the renderer image.
+
+```bash
+# Terminal 1: renderer service
+RENDERER_HOST=0.0.0.0 RENDERER_PORT=8001 diagrams-renderer-server
+
+# Terminal 2: HTTP MCP facade delegating to the renderer
+FASTMCP_TRANSPORT=http \
+FASTMCP_HOST=0.0.0.0 \
+FASTMCP_PORT=8000 \
+DIAGRAMS_RENDERER_MODE=remote \
+DIAGRAMS_RENDERER_URL=http://127.0.0.1:8001 \
+diagrams-mcp-server
+```
+
+Docker/Railway examples are included:
+
+| File | Purpose |
+|---|---|
+| `Dockerfile.facade` | Slim MCP facade image without renderer-only binaries |
+| `Dockerfile.renderer` | Renderer image with Graphviz, Chromium, Mermaid CLI, Java, and PlantUML |
+| `railway.facade.toml` | Example Railway facade service config |
+| `railway.renderer.toml` | Example Railway renderer service config |
+
+Key environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `DIAGRAMS_RENDERER_MODE=remote` | Makes the facade use the HTTP renderer service |
+| `DIAGRAMS_RENDERER_URL` | Renderer base URL, for example `http://diagrams-renderer.railway.internal:8080` |
+| `DIAGRAMS_IMAGE_STORE_DIR` | Optional file-backed temporary image store directory |
+| `BASE_URL` | Optional public base URL used when returning absolute download links |
 
 ## Supported Providers
 

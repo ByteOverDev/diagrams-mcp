@@ -4,6 +4,7 @@ from fastmcp.utilities.types import Image
 
 from diagrams_mcp.image_store import (
     ANTHROPIC_INLINE_IMAGE_MAX_BYTES,
+    FileImageStore,
     ImageStore,
     default_download_link,
     deliver_image,
@@ -79,6 +80,32 @@ def test_deliver_image_inline_default_png():
     assert isinstance(result, Image)
     content = result.to_image_content()
     assert content.mimeType == "image/png"
+
+
+def test_file_image_store_stores_without_process_memory(tmp_path):
+    store = FileImageStore(tmp_path)
+    token = store.store(_VALID_PNG, "file", fmt="png")
+    entry = store.get(token)
+    assert entry is not None
+    assert entry.data == _VALID_PNG
+    assert entry.filename == "file"
+    assert entry.fmt == "png"
+
+
+def test_file_image_store_expires_entries(tmp_path):
+    store = FileImageStore(tmp_path)
+    token = store.store(_VALID_PNG, "file", ttl=0)
+    assert store.get(token) is None
+
+
+def test_deliver_image_uses_active_output_store(monkeypatch, tmp_path):
+    import diagrams_mcp.image_store as image_store_module
+
+    store = FileImageStore(tmp_path)
+    monkeypatch.setattr(image_store_module, "output_store", store)
+    result = image_store_module.deliver_image(_VALID_PNG, "test", download_link=True)
+    token = result.split("/images/")[1]
+    assert store.get(token).data == _VALID_PNG
 
 
 def test_deliver_image_svg_auto_promotes_to_download_link():

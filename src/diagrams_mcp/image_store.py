@@ -1,10 +1,14 @@
-"""In-memory store for temporary diagram images with TTL-based expiry."""
+"""Temporary diagram output delivery stores."""
 
+import json
+import logging
 import os
 import secrets
 import threading
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Protocol
 
 from fastmcp.exceptions import ToolError
 from fastmcp.utilities.types import File, Image
@@ -21,6 +25,7 @@ _FORMAT_MAP: dict[str, dict[str, str]] = {
 # turn — so we transparently promote those to a download link.
 ANTHROPIC_INLINE_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 _PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -143,7 +148,104 @@ class ImageStore:
             self._remove(k)
 
 
+class ImageStorage(Protocol):
+    """Storage interface for temporary rendered outputs."""
+
+    max_entry_bytes: int
+
+    def store(
+        self, data: bytes, filename: str, *, fmt: str = "png", ttl: float = ImageStore.DEFAULT_TTL
+    ) -> str: ...
+
+    def get(self, token: str) -> ImageEntry | None: ...
+
+
+class FileImageStore:
+    """File-backed temporary output store that avoids retaining bytes in process memory."""
+
+    DEFAULT_TTL: float = ImageStore.DEFAULT_TTL
+
+    def __init__(self, root: str | os.PathLike[str], *, max_entry_bytes: int = 10 * 1024 * 1024):
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.max_entry_bytes = max_entry_bytes
+        self._lock = threading.Lock()
+
+    def store(
+        self, data: bytes, filename: str, *, fmt: str = "png", ttl: float = DEFAULT_TTL
+    ) -> str:
+        entry_size = len(data)
+        if entry_size > self.max_entry_bytes:
+            raise ValueError(
+                f"Image too large: {entry_size} bytes exceeds {self.max_entry_bytes} byte limit"
+            )
+        token = secrets.token_urlsafe(32)
+        meta = {
+            "filename": filename,
+            "fmt": fmt,
+            "expires_at": time.time() + ttl,
+        }
+        with self._lock:
+            self._sweep()
+            (self.root / f"{token}.bin").write_bytes(data)
+            (self.root / f"{token}.json").write_text(json.dumps(meta), encoding="utf-8")
+        return token
+
+    def get(self, token: str) -> ImageEntry | None:
+        if not _is_token_safe(token):
+            return None
+        meta_path = self.root / f"{token}.json"
+        data_path = self.root / f"{token}.bin"
+        with self._lock:
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                if meta["expires_at"] < time.time():
+                    self._remove(token)
+                    return None
+                data = data_path.read_bytes()
+            except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+                self._remove(token)
+                return None
+        return ImageEntry(
+            data=data,
+            filename=str(meta.get("filename", "image")),
+            expires_at=float(meta["expires_at"]),
+            fmt=str(meta.get("fmt", "png")),
+        )
+
+    def _remove(self, token: str) -> None:
+        for suffix in (".bin", ".json"):
+            try:
+                (self.root / f"{token}{suffix}").unlink()
+            except FileNotFoundError:
+                pass
+
+    def _sweep(self) -> None:
+        now = time.time()
+        for meta_path in self.root.glob("*.json"):
+            token = meta_path.stem
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                self._remove(token)
+                continue
+            if meta.get("expires_at", 0) < now:
+                self._remove(token)
+
+
+def _is_token_safe(token: str) -> bool:
+    return bool(token) and all(c.isalnum() or c in "-_" for c in token)
+
+
+def _select_output_store() -> ImageStorage:
+    store_dir = os.environ.get("DIAGRAMS_IMAGE_STORE_DIR", "").strip()
+    if store_dir:
+        return FileImageStore(store_dir)
+    return image_store
+
+
 image_store = ImageStore()
+output_store: ImageStorage = _select_output_store()
 
 
 def default_download_link() -> bool:
@@ -178,12 +280,12 @@ def deliver_image(
         raise ToolError("Rendered PNG is malformed (missing PNG signature)")
 
     # Fail fast with one clear message when the payload can't be delivered by
-    # any path: URLs are bounded by the store's per-entry cap, and inline PNGs
+    # any path: URLs are bounded by the active store's per-entry cap, and inline PNGs
     # are bounded by Anthropic's 5 MB vision cap.
-    if len(data) > image_store.max_entry_bytes:
+    if len(data) > output_store.max_entry_bytes:
         raise ToolError(
             f"Rendered {fmt} is too large: {len(data)} bytes exceeds"
-            f" {image_store.max_entry_bytes} byte delivery limit"
+            f" {output_store.max_entry_bytes} byte delivery limit"
         )
 
     # Formats Claude's vision API cannot decode inline are always served via
@@ -195,11 +297,36 @@ def deliver_image(
 
     if download_link:
         try:
-            token = image_store.store(data, filename, fmt=fmt)
+            token = output_store.store(data, filename, fmt=fmt)
         except ValueError as exc:
             raise ToolError(str(exc)) from exc
         base_url = os.environ.get("BASE_URL", "").rstrip("/")
+        _logger.info(
+            "output_delivery %s",
+            json.dumps(
+                {
+                    "event": "output_stored",
+                    "format": fmt,
+                    "delivery": "download_link",
+                    "bytes": len(data),
+                    "store": type(output_store).__name__,
+                },
+                sort_keys=True,
+            ),
+        )
         return f"{base_url}/images/{token}"
 
     image_fmt = _FORMAT_MAP[fmt]["image_fmt"]
+    _logger.info(
+        "output_delivery %s",
+        json.dumps(
+            {
+                "event": "output_inline",
+                "format": fmt,
+                "delivery": "inline",
+                "bytes": len(data),
+            },
+            sort_keys=True,
+        ),
+    )
     return Image(data=data, format=image_fmt)

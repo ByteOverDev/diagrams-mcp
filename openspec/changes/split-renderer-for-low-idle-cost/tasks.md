@@ -46,8 +46,8 @@
 ## 7. Validation And Rollout
 
 - [x] 7.1 Run the full test suite and lint/format checks.
-- [ ] 7.2 Deploy the split architecture to a non-production or preview environment if available.
+- [x] 7.2 Deploy the split architecture to a non-production or preview environment if available.
 - [ ] 7.3 Validate discovery and reference tools with the renderer unavailable.
-- [ ] 7.4 Validate each render engine through the facade using remote renderer mode.
-- [ ] 7.5 Compare post-split facade idle memory against the pre-split 0.69 GB baseline and the target threshold.
+- [x] 7.4 Validate each render engine through the facade using remote renderer mode.
+- [x] 7.5 Compare post-split facade idle memory against the pre-split 0.69 GB baseline and the target threshold.
 - [ ] 7.6 Promote to production only after client-facing render behavior and output delivery compatibility are verified.

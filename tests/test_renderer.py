@@ -37,6 +37,16 @@ def test_renderer_service_returns_structured_render_error():
     assert response.json()["ok"] is False
 
 
+def test_renderer_service_returns_structured_json_error():
+    with TestClient(app) as client:
+        response = client.post(
+            "/render", content=b"{", headers={"content-type": "application/json"}
+        )
+    assert response.status_code == 400
+    assert response.json()["ok"] is False
+    assert response.json()["errorType"] == "JSONDecodeError"
+
+
 def test_renderer_service_can_bind_ipv4_and_ipv6():
     try:
         sockets = _bind_dual_stack_sockets(0)
@@ -91,14 +101,11 @@ def test_remote_renderer_raises_tool_error_on_error_response(monkeypatch):
             return b'{"ok": false, "error": "boom"}'
 
     monkeypatch.setattr("urllib.request.urlopen", lambda request, timeout: _Response())
-    try:
+    with pytest.raises(ToolError) as exc_info:
         RemoteRenderer("https://renderer.example").render(
             RenderRequest(kind="mermaid", source="graph TD; A-->B;")
         )
-    except ToolError as exc:
-        assert "boom" in str(exc)
-    else:
-        raise AssertionError("Expected ToolError")
+    assert "boom" in str(exc_info.value)
 
 
 class FakeRenderer:

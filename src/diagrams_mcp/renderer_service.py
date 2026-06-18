@@ -1,5 +1,7 @@
 """HTTP service entry point for the separated renderer."""
 
+import asyncio
+import json
 import os
 import socket
 
@@ -16,8 +18,14 @@ async def health(request: Request) -> JSONResponse:
 
 
 async def render(request: Request) -> JSONResponse:
-    payload = await request.json()
-    result = render_from_payload(payload)
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError as exc:
+        return JSONResponse(
+            {"ok": False, "error": str(exc), "errorType": type(exc).__name__},
+            status_code=400,
+        )
+    result = await asyncio.to_thread(render_from_payload, payload)
     return JSONResponse(result, status_code=200 if result.get("ok") else 400)
 
 

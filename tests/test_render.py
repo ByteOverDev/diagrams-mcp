@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from conftest import has_graphviz
@@ -162,7 +163,8 @@ with Diagram("Test"):
 """
     result = render_diagram(code=code, format="svg", download_link=False)
     assert isinstance(result, str)
-    assert result.startswith("/images/")
+    parsed = urlparse(result)
+    assert parsed.path.startswith("/images/")
 
 
 @has_graphviz

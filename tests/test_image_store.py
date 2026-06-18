@@ -94,7 +94,7 @@ def test_file_image_store_stores_without_process_memory(tmp_path):
 
 def test_file_image_store_expires_entries(tmp_path):
     store = FileImageStore(tmp_path)
-    token = store.store(_VALID_PNG, "file", ttl=0)
+    token = store.store(_VALID_PNG, "file", ttl=-1)
     assert store.get(token) is None
 
 

@@ -301,7 +301,11 @@ def render_from_payload(payload: dict) -> dict:
 
 
 def _find_resources_dir() -> Path | None:
-    for sp in site.getsitepackages() + [site.getusersitepackages()]:
+    site_packages = site.getsitepackages()
+    user_site = site.getusersitepackages()
+    if user_site is not None:
+        site_packages.append(user_site)
+    for sp in site_packages:
         candidate = Path(sp) / "resources"
         if candidate.is_dir():
             return candidate

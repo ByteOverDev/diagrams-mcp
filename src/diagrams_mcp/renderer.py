@@ -163,6 +163,8 @@ class RemoteRenderer(BaseRenderer):
     """HTTP renderer client used by the slim facade."""
 
     def __init__(self, base_url: str, *, timeout: float = 30.0) -> None:
+        if "://" not in base_url:
+            base_url = f"http://{base_url}"
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 

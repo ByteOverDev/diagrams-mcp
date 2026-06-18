@@ -33,6 +33,11 @@ The facade supports two renderer modes:
 | In-process | `DIAGRAMS_RENDERER_MODE=in-process` or unset | Existing behavior; facade executes renderers locally. |
 | Remote | `DIAGRAMS_RENDERER_MODE=remote` and `DIAGRAMS_RENDERER_URL=<url>` | Facade delegates render work to a renderer service. |
 
+`DIAGRAMS_RENDERER_URL` may be either a full URL such as
+`http://diagrams-renderer.railway.internal:8080` or a Railway private domain
+such as `diagrams-renderer.railway.internal`; schemeless values are normalized
+to `http://...` by the facade.
+
 Temporary output delivery supports two stores:
 
 | Store | Environment | Behavior |

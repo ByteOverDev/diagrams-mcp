@@ -27,6 +27,7 @@ dependencies = [
 
 [project.scripts]
 diagrams-mcp-server = "diagrams_mcp.server:main"
+diagrams-renderer-server = "diagrams_mcp.renderer_service:main"
 
 [project.optional-dependencies]
 dev = ["ruff", "pytest"]

@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+# Slim MCP facade image: no Graphviz, Chromium, Node/Mermaid CLI, Java, or PlantUML.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home appuser
+
+WORKDIR /app
+COPY --chown=appuser:appuser . .
+RUN pip install --no-cache-dir .
+
+USER appuser
+
+ENV FASTMCP_TRANSPORT=http
+ENV FASTMCP_HOST=0.0.0.0
+ENV DIAGRAMS_RENDERER_MODE=remote
+
+CMD ["sh", "-c", "FASTMCP_PORT=${PORT:-8000} diagrams-mcp-server"]

@@ -30,6 +30,31 @@ def test_serve_image_returns_png():
         assert response.content == b"\x89PNG\r\n\x1a\nfake"
 
 
+def test_serve_image_with_file_store(monkeypatch, tmp_path):
+    """GET /images/{token} can serve outputs from the active storage backend."""
+    import diagrams_mcp.server as server_module
+    from diagrams_mcp.image_store import FileImageStore
+
+    store = FileImageStore(tmp_path)
+    token = store.store(b"\x89PNG\r\n\x1a\nfake", "file")
+    monkeypatch.setattr(server_module, "output_store", store)
+    app = mcp.http_app()
+    with TestClient(app) as client:
+        response = client.get(f"/images/{token}")
+        assert response.status_code == 200
+        assert response.content == b"\x89PNG\r\n\x1a\nfake"
+
+
+def test_serve_image_sanitizes_non_ascii_filename():
+    """Content-Disposition must remain latin-1 encodable for Starlette headers."""
+    token = image_store.store(b"\x89PNG\r\n\x1a\nfake", "діаграма")
+    app = mcp.http_app()
+    with TestClient(app) as client:
+        response = client.get(f"/images/{token}")
+        assert response.status_code == 200
+        assert response.headers["content-disposition"] == 'attachment; filename="image.png"'
+
+
 def test_serve_image_unknown_token_returns_404():
     """GET /images/{bad_token} returns 404."""
     app = mcp.http_app()

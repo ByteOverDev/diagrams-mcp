@@ -4,7 +4,7 @@ from fastmcp import FastMCP
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from starlette.responses import JSONResponse, Response
 
-from diagrams_mcp.image_store import _FORMAT_MAP, image_store
+from diagrams_mcp.image_store import _FORMAT_MAP, output_store
 from diagrams_mcp.prompts import prompts_app
 from diagrams_mcp.resources import references
 from diagrams_mcp.tools.discovery import discovery
@@ -78,7 +78,7 @@ async def health(request):
 @mcp.custom_route("/images/{token}", methods=["GET"])
 async def serve_image(request):
     token = request.path_params["token"]
-    entry = image_store.get(token)
+    entry = output_store.get(token)
     if entry is None:
         return JSONResponse({"error": "not found or expired"}, status_code=404)
     safe_name = _sanitize_filename(entry.filename)
@@ -93,6 +93,7 @@ async def serve_image(request):
 def _sanitize_filename(name: str) -> str:
     """Sanitize a filename for use in Content-Disposition headers."""
     name = re.sub(r'["\\/\r\n\x00-\x1f]', "", name)
+    name = name.encode("ascii", errors="ignore").decode("ascii")
     name = name[:100]
     return name or "image"
 

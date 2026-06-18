@@ -40,6 +40,9 @@ to `http://...` by the facade.
 
 On Railway, the renderer should bind to IPv6 for private networking:
 `RENDERER_HOST=:: RENDERER_PORT=$PORT diagrams-renderer-server`.
+If Railway's HTTP healthcheck cannot reach that IPv6 listener, validate the
+renderer via facade `/health` and end-to-end render calls instead of a renderer
+service healthcheck.
 
 Temporary output delivery supports two stores:
 

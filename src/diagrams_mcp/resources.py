@@ -1,4 +1,4 @@
-from fastmcp import FastMCP
+from diagrams_mcp.fastmcp_compat import FastMCP
 
 references = FastMCP("References")
 

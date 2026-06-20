@@ -1,7 +1,6 @@
 import pytest
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import Image
 
+from diagrams_mcp.fastmcp_compat import Image, ToolError
 from diagrams_mcp.image_store import (
     ANTHROPIC_INLINE_IMAGE_MAX_BYTES,
     FileImageStore,

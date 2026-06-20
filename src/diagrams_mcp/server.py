@@ -1,17 +1,27 @@
 import re
 
-from fastmcp import FastMCP
-from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+from mcp.server.fastmcp.server import FastMCP
 from starlette.responses import JSONResponse, Response
 
 from diagrams_mcp.image_store import _FORMAT_MAP, output_store
-from diagrams_mcp.prompts import prompts_app
-from diagrams_mcp.resources import references
-from diagrams_mcp.tools.discovery import discovery
-from diagrams_mcp.tools.equivalence import equivalence
-from diagrams_mcp.tools.mermaid import mermaid
-from diagrams_mcp.tools.plantuml import plantuml
-from diagrams_mcp.tools.render import render
+from diagrams_mcp.prompts import (
+    architecture_diagram,
+    compare_providers,
+    quick_sketch,
+    sequence_flow,
+)
+from diagrams_mcp.resources import (
+    cluster_reference,
+    diagram_reference,
+    edge_reference,
+    mermaid_reference,
+    plantuml_reference,
+)
+from diagrams_mcp.tools.discovery import list_nodes, list_providers, list_services, search_nodes
+from diagrams_mcp.tools.equivalence import find_equivalent, list_categories
+from diagrams_mcp.tools.mermaid import render_mermaid
+from diagrams_mcp.tools.plantuml import render_plantuml
+from diagrams_mcp.tools.render import render_diagram
 
 mcp = FastMCP(
     "diagrams",
@@ -42,25 +52,35 @@ mcp = FastMCP(
         "(png, svg, pdf — PlantUML: png/svg only) "
         "and `download_link` (returns a temporary URL instead of inline image data)."
     ),
-    mask_error_details=True,
 )
 
-# Rate limiting — outermost middleware, runs before all sub-app dispatch.
-# Token bucket: sustains 2 req/sec, allows bursts up to 5.
-mcp.add_middleware(
-    RateLimitingMiddleware(
-        max_requests_per_second=2.0,
-        burst_capacity=5,
+mcp.add_tool(render_diagram, annotations={"readOnlyHint": True}, structured_output=False)
+mcp.add_tool(list_providers, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(list_services, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(list_nodes, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(search_nodes, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(find_equivalent, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(list_categories, annotations={"readOnlyHint": True, "idempotentHint": True})
+mcp.add_tool(render_mermaid, annotations={"readOnlyHint": True}, structured_output=False)
+mcp.add_tool(render_plantuml, annotations={"readOnlyHint": True}, structured_output=False)
+
+mcp.resource("diagrams://reference/diagram", mime_type="text/markdown")(diagram_reference)
+mcp.resource("diagrams://reference/edge", mime_type="text/markdown")(edge_reference)
+mcp.resource("diagrams://reference/cluster", mime_type="text/markdown")(cluster_reference)
+mcp.resource("diagrams://reference/mermaid", mime_type="text/markdown")(mermaid_reference)
+mcp.resource("diagrams://reference/plantuml", mime_type="text/markdown")(plantuml_reference)
+
+mcp.prompt(description="Guide the user through building a cloud architecture diagram")(
+    architecture_diagram
+)
+mcp.prompt(description="Guide creation of a sequence or flow diagram")(sequence_flow)
+mcp.prompt(description="Walk through multi-cloud service comparison")(compare_providers)
+mcp.prompt(
+    description=(
+        "Minimal-friction path: describe what to visualize and the best engine is"
+        " picked automatically"
     )
-)
-
-mcp.mount(render)
-mcp.mount(discovery)
-mcp.mount(references)
-mcp.mount(mermaid)
-mcp.mount(plantuml)
-mcp.mount(equivalence)
-mcp.mount(prompts_app)
+)(quick_sketch)
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -98,14 +118,18 @@ def _sanitize_filename(name: str) -> str:
     return name or "image"
 
 
+def create_test_http_app():
+    """Return a fresh HTTP app for tests.
+
+    FastMCP caches a one-shot session manager behind ``streamable_http_app()``;
+    TestClient startup/shutdown across multiple tests needs a fresh one.
+    """
+    mcp._session_manager = None
+    return mcp.streamable_http_app()
+
+
 def main():
-    # stateless_http=True: do not retain per-session transports in memory.
-    # FastMCP's streamable-HTTP transport keeps a session object per client in
-    # memory by default; on a long-lived public deployment those accumulate and
-    # are only freed on restart (observed as a steady RSS climb -> OOM restart).
-    # None of these tools use stateful features (elicitation/sampling), so a
-    # fresh transport per request is correct and bounds memory.
-    mcp.run(stateless_http=True)
+    mcp.run()
 
 
 if __name__ == "__main__":

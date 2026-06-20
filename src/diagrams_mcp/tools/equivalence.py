@@ -1,7 +1,4 @@
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-
-equivalence = FastMCP("Equivalence")
+from diagrams_mcp.fastmcp_compat import ToolError
 
 
 def _build_import_path(provider: str, service: str, node: str) -> str:
@@ -399,7 +396,6 @@ def _collect_equivalents(
     return equivalents
 
 
-@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     """Find cross-provider equivalents for a diagram node by infrastructure role.
 
@@ -479,7 +475,6 @@ def find_equivalent(node: str, target_provider: str | None = None) -> dict:
     }
 
 
-@equivalence.tool(annotations={"readOnlyHint": True, "idempotentHint": True})
 def list_categories() -> list[dict]:
     """List all infrastructure role categories with their mapped nodes.
 

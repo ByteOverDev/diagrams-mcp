@@ -1,6 +1,6 @@
 import pytest
-from fastmcp.exceptions import ToolError
 
+from diagrams_mcp.fastmcp_compat import ToolError
 from diagrams_mcp.tools.discovery import list_nodes, list_providers, list_services, search_nodes
 
 

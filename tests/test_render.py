@@ -3,9 +3,8 @@ from urllib.parse import urlparse
 
 import pytest
 from conftest import has_graphviz
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import Image
 
+from diagrams_mcp.fastmcp_compat import Image, ToolError
 from diagrams_mcp.tools.render import render_diagram
 
 

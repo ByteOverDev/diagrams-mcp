@@ -2,15 +2,12 @@ import re
 import sys
 from typing import Literal
 
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import File, Image
+from mcp.types import EmbeddedResource
 
+from diagrams_mcp.fastmcp_compat import Image, ToolError
 from diagrams_mcp.image_store import default_download_link, deliver_image
 from diagrams_mcp.renderer import InProcessRenderer, RenderRequest, get_renderer, graphviz_available
 from diagrams_mcp.tools.discovery import _get_node_index
-
-render = FastMCP("Render")
 
 _graphviz_available = graphviz_available()
 
@@ -87,13 +84,12 @@ def _enhance_import_error(message: str) -> str:
     return message
 
 
-@render.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_diagram(
     code: str,
     filename: str = "diagram",
     format: Literal["png", "svg", "pdf"] = "png",
     download_link: bool | None = None,
-) -> Image | File | str:
+) -> Image | EmbeddedResource | str:
     """Render a mingrammer/diagrams Python snippet to PNG and return the image.
 
     The code must be a complete Python script using `from diagrams import ...` imports

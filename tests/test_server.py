@@ -1,15 +1,14 @@
 import asyncio
 
-from mcp import McpError
 from starlette.testclient import TestClient
 
 from diagrams_mcp.image_store import image_store
-from diagrams_mcp.server import mcp
+from diagrams_mcp.server import create_test_http_app, mcp
 
 
 def test_health_endpoint_returns_ok():
     """The /health endpoint returns HTTP 200 with shields.io-compatible JSON."""
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get("/health")
         assert response.status_code == 200
@@ -21,7 +20,7 @@ def test_health_endpoint_returns_ok():
 def test_serve_image_returns_png():
     """GET /images/{token} returns the stored PNG with correct headers."""
     token = image_store.store(b"\x89PNG\r\n\x1a\nfake", "my_diagram")
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 200
@@ -38,7 +37,7 @@ def test_serve_image_with_file_store(monkeypatch, tmp_path):
     store = FileImageStore(tmp_path)
     token = store.store(b"\x89PNG\r\n\x1a\nfake", "file")
     monkeypatch.setattr(server_module, "output_store", store)
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 200
@@ -48,7 +47,7 @@ def test_serve_image_with_file_store(monkeypatch, tmp_path):
 def test_serve_image_sanitizes_non_ascii_filename():
     """Content-Disposition must remain latin-1 encodable for Starlette headers."""
     token = image_store.store(b"\x89PNG\r\n\x1a\nfake", "діаграма")
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 200
@@ -57,7 +56,7 @@ def test_serve_image_sanitizes_non_ascii_filename():
 
 def test_serve_image_unknown_token_returns_404():
     """GET /images/{bad_token} returns 404."""
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get("/images/nonexistent-token")
         assert response.status_code == 404
@@ -66,7 +65,7 @@ def test_serve_image_unknown_token_returns_404():
 def test_serve_image_expired_returns_404():
     """GET /images/{token} returns 404 for expired images."""
     token = image_store.store(b"data", "expired", ttl=0)
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 404
@@ -75,7 +74,7 @@ def test_serve_image_expired_returns_404():
 def test_serve_image_returns_svg():
     """GET /images/{token} returns SVG with correct headers when stored as svg."""
     token = image_store.store(b"<svg></svg>", "my_diagram", fmt="svg")
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 200
@@ -86,7 +85,7 @@ def test_serve_image_returns_svg():
 def test_serve_image_returns_pdf():
     """GET /images/{token} returns PDF with correct headers when stored as pdf."""
     token = image_store.store(b"%PDF-1.4 fake", "my_diagram", fmt="pdf")
-    app = mcp.http_app()
+    app = create_test_http_app()
     with TestClient(app) as client:
         response = client.get(f"/images/{token}")
         assert response.status_code == 200
@@ -100,31 +99,3 @@ def test_equivalence_tools_registered():
     names = {t.name for t in tools}
     assert "find_equivalent" in names
     assert "list_categories" in names
-
-
-def test_rate_limiting_middleware_is_registered():
-    """RateLimitingMiddleware is present in the root server's middleware chain."""
-    from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
-
-    middleware_types = [type(m) for m in mcp.middleware]
-    assert RateLimitingMiddleware in middleware_types
-
-
-def test_rate_limiting_rejects_after_burst():
-    """After exhausting burst capacity, further requests are rejected with McpError."""
-    from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
-
-    # Read burst_capacity from the actual middleware instance
-    rl = next(m for m in mcp.middleware if isinstance(m, RateLimitingMiddleware))
-    burst = rl.burst_capacity
-
-    async def fire_concurrent():
-        # Schedule more concurrent calls than the burst capacity allows
-        tasks = [mcp.call_tool("list_providers") for _ in range(burst + 1)]
-        return await asyncio.gather(*tasks, return_exceptions=True)
-
-    results = asyncio.run(fire_concurrent())
-
-    # At least one call should have been rejected with McpError
-    errors = [r for r in results if isinstance(r, McpError)]
-    assert errors, f"Expected at least 1 McpError among {len(results)} results"

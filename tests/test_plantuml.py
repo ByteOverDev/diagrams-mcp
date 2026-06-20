@@ -1,8 +1,7 @@
 import pytest
 from conftest import has_plantuml
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import Image
 
+from diagrams_mcp.fastmcp_compat import Image, ToolError
 from diagrams_mcp.tools.plantuml import render_plantuml
 
 

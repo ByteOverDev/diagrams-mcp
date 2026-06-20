@@ -6,13 +6,9 @@ import re
 import zlib
 from typing import Literal
 
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-
+from diagrams_mcp.fastmcp_compat import ToolError
 from diagrams_mcp.image_store import default_download_link, deliver_image
 from diagrams_mcp.renderer import RenderRequest, get_renderer
-
-mermaid = FastMCP("Mermaid")
 
 _DIAGRAM_TYPES = {
     "flowchart": re.compile(r"^\s*flowchart\b"),
@@ -80,7 +76,6 @@ def _mermaid_live_url(code: str) -> str:
     return f"https://mermaid.live/edit#pako:{encoded}"
 
 
-@mermaid.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_mermaid(
     definition: str,
     filename: str = "diagram",

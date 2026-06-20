@@ -2,23 +2,19 @@
 
 from typing import Literal
 
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import File, Image
+from mcp.types import EmbeddedResource
 
+from diagrams_mcp.fastmcp_compat import Image, ToolError
 from diagrams_mcp.image_store import default_download_link, deliver_image
 from diagrams_mcp.renderer import RenderRequest, get_renderer
 
-plantuml = FastMCP("PlantUML")
 
-
-@plantuml.tool(timeout=30.0, annotations={"readOnlyHint": True})
 def render_plantuml(
     definition: str,
     filename: str = "diagram",
     format: Literal["png", "svg", "pdf"] = "png",
     download_link: bool | None = None,
-) -> Image | File | str:
+) -> Image | EmbeddedResource | str:
     """Render a PlantUML diagram definition and return the image.
 
     The definition should be valid PlantUML syntax wrapped in @startuml/@enduml

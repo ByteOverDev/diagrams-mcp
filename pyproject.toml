@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "diagrams>=0.23,<1.0",
-    "fastmcp==3.2.3",
+    "fastmcp==3.4.2",
     "pyseccomp>=0.1.0; sys_platform == 'linux'",
 ]
 

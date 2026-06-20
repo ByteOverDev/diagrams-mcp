@@ -4,8 +4,9 @@ import zlib
 
 import pytest
 from conftest import has_mmdc
-from fastmcp.utilities.types import Image
+from mcp.types import EmbeddedResource
 
+from diagrams_mcp.fastmcp_compat import Image
 from diagrams_mcp.tools.mermaid import _detect_type, _mermaid_live_url, render_mermaid
 
 
@@ -230,14 +231,13 @@ def test_render_mermaid_svg():
 
 @has_mmdc
 def test_render_mermaid_pdf():
-    """render_mermaid with format='pdf' returns PDF File in result list."""
-    from fastmcp.utilities.types import File
+    """render_mermaid with format='pdf' returns embedded PDF resource in result list."""
 
     definition = "graph TD;\n    A-->B;"
     result = render_mermaid(definition=definition, format="pdf", download_link=False)
     assert isinstance(result, list)
     assert len(result) == 2
-    assert isinstance(result[0], File)
+    assert isinstance(result[0], EmbeddedResource)
 
 
 @has_mmdc

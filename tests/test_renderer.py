@@ -2,9 +2,9 @@ import base64
 import socket
 
 import pytest
-from fastmcp.exceptions import ToolError
 from starlette.testclient import TestClient
 
+from diagrams_mcp.fastmcp_compat import ToolError
 from diagrams_mcp.renderer import (
     RemoteRenderer,
     RenderRequest,

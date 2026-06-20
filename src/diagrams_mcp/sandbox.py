@@ -11,7 +11,7 @@ import tempfile
 import textwrap
 from pathlib import Path
 
-from fastmcp.exceptions import ToolError
+from diagrams_mcp.fastmcp_compat import ToolError
 
 _SAFE_FILENAME = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9 _\-\.]{0,99}$")
 

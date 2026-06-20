@@ -1,8 +1,8 @@
 import importlib
 
 import pytest
-from fastmcp.exceptions import ToolError
 
+from diagrams_mcp.fastmcp_compat import ToolError
 from diagrams_mcp.tools.equivalence import CATEGORIES, find_equivalent, list_categories
 
 

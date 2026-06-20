@@ -18,8 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from fastmcp.exceptions import ToolError
-
+from diagrams_mcp.fastmcp_compat import ToolError
 from diagrams_mcp.sandbox import run_cli, run_code
 
 RenderKind = Literal["diagram", "mermaid", "plantuml"]

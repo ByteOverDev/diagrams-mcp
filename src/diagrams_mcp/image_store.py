@@ -10,8 +10,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from fastmcp.exceptions import ToolError
-from fastmcp.utilities.types import File, Image
+from mcp.types import EmbeddedResource
+
+from diagrams_mcp.fastmcp_compat import Image, ToolError, binary_file
 
 _FORMAT_MAP: dict[str, dict[str, str]] = {
     "png": {"mime": "image/png", "ext": ".png", "image_fmt": "png"},
@@ -266,7 +267,7 @@ def deliver_image(
     filename: str,
     download_link: bool,
     fmt: str = "png",
-) -> Image | File | str:
+) -> Image | EmbeddedResource | str:
     """Return rendered image data as an inline Image/File or a temporary download link.
 
     Shared by render_diagram, render_mermaid, and render_plantuml.
@@ -329,4 +330,6 @@ def deliver_image(
             sort_keys=True,
         ),
     )
+    if fmt == "pdf":
+        return binary_file(data, f"{filename}.pdf", _FORMAT_MAP[fmt]["mime"])
     return Image(data=data, format=image_fmt)
